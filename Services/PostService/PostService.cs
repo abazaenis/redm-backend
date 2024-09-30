@@ -118,7 +118,7 @@
         public async Task<ServiceResponse<List<GetPostCategoryDto>>> GetPostsPreviews()
         {
             var response = new ServiceResponse<List<GetPostCategoryDto>>();
-            var previews = await _context.PostCategories.Include(p => p.Posts).OrderBy(pc => pc.Title).ToListAsync();
+            var previews = await _context.PostCategories.Where(p => p.Posts.Count != 0).Include(p => p.Posts).OrderBy(pc => pc.Title).ToListAsync();
 
             response.Data = _mapper.Map<List<GetPostCategoryDto>>(previews);
 
