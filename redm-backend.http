@@ -1,0 +1,6 @@
+@redm_backend_HostAddress = http://localhost:5277
+
+GET {{redm_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
