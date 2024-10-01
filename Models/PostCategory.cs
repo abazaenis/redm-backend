@@ -7,5 +7,7 @@
         public string? Title { get; set; }
 
         public ICollection<Post> Posts { get; set; } = new List<Post>();
+
+        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

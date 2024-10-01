@@ -24,5 +24,7 @@
         public DbSet<Story> Stories => Set<Story>();
 
         public DbSet<PeriodHistory> PeriodHistory => Set<PeriodHistory>();
+
+        public DbSet<Product> Products => Set<Product>();
     }
 }

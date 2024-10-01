@@ -7,14 +7,16 @@ namespace Redm_backend
     using Redm_backend.Data;
     using Redm_backend.Dtos.PeriodHistory;
     using Redm_backend.Services.AdminService;
-    using Redm_backend.Services.PeriodService;
+	using Redm_backend.Services.HomePageService;
+	using Redm_backend.Services.PeriodService;
     using Redm_backend.Services.PostService;
-    using Redm_backend.Services.StoryService;
+	using Redm_backend.Services.ProductService;
+	using Redm_backend.Services.StoryService;
     using Redm_backend.Services.SymptomService;
     using Redm_backend.Services.UserService;
     using Swashbuckle.AspNetCore.Filters;
 
-    public class Program
+    public static class Program
     {
         public static void Main(string[] args)
         {
@@ -53,6 +55,8 @@ namespace Redm_backend
             builder.Services.AddScoped<IPostService, PostService>();
             builder.Services.AddScoped<IStoryService, StoryService>();
             builder.Services.AddScoped<IPeriodHistoryService, PeriodHistoryService>();
+            builder.Services.AddScoped<IHomePageService, HomePageService>();
+            builder.Services.AddScoped<IProductService, ProductService>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {

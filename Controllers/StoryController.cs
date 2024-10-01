@@ -44,7 +44,7 @@
                 return NotFound(response);
             }
 
-            return Created(string.Empty, response);
+            return Ok(response);
         }
     }
 }
