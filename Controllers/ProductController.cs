@@ -50,7 +50,7 @@
 			return Ok(response);
 		}
 
-		[HttpDelete("DeleteStory")]
+		[HttpDelete("DeleteProduct")]
 		[SwaggerOperation(Summary = "Requires admin privileges")]
 		[Authorize(Roles = "Admin")]
 		public async Task<ActionResult<ServiceResponse<object?>>> DeleteProduct(int productId)
