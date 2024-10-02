@@ -22,6 +22,7 @@
             CreateMap<AddProductDto, Product>();
             CreateMap<Product, GetProductDto>();
             CreateMap<PostCategory, GetProductsDto>();
+            CreateMap<PostCategory, GetPostCategoryDto>();
 		}
     }
 }
