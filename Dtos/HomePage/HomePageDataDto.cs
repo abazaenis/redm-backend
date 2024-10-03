@@ -22,6 +22,6 @@
 
 		public int? PercentageOfLatePeriods { get; set; }
 
-		// TODO: Ima još nešto, pitaj ibru
+		public List<PastPeriodDto>? PastPeriods { get; set; }
     }
 }

@@ -102,7 +102,6 @@
 					data.AverageCycleDuration = null;
 				}
 
-
 				allUserPeriods.Reverse();
 
 				if (allUserPeriods.Count > 1)
@@ -143,6 +142,19 @@
 					data.PercentageOfEarlyPeriods = null;
 					data.PercentageOfLatePeriods = null;
 				}
+
+				var pastPeriods = new List<PastPeriodDto>();
+
+				foreach (var period in allUserPeriods)
+				{
+					pastPeriods.Add(new PastPeriodDto
+					{
+						FromTo = $"{period.StartDate.ToString("dd.MM")} - {period.EndDate.ToString("dd.MM")}",
+						PeriodDuration = (period.EndDate - period.StartDate).Days + 1,
+					});
+				}
+
+				data.PastPeriods = pastPeriods;
 			}
 			else
 			{
