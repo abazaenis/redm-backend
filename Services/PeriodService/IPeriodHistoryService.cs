@@ -7,7 +7,7 @@
     {
         Task<ServiceResponse<object?>> AddPeriod(AddPeriodDto period);
 
-        Task<ServiceResponse<Dictionary<string, GetPeriodDto>>> GetPeriodsByYearByMonth(string yearMonth);
+        Task<ServiceResponse<Dictionary<string, GetPeriodDto>>> GetPeriodsAndPredictions();
 
         Task<ServiceResponse<object?>> UpdatePeriod(UpdatePeriodDto period);
 

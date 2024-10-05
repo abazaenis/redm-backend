@@ -32,9 +32,9 @@
         }
 
         [HttpGet("GetPeriodsByYearByMonth")]
-        public async Task<ActionResult<ServiceResponse<Dictionary<string, GetPeriodDto>>>> GetPeriodsByYearByMonth(string yearMonth)
+        public async Task<ActionResult<ServiceResponse<Dictionary<string, GetPeriodDto>>>> GetPeriodsAndPredictions()
         {
-            var response = await _periodService.GetPeriodsByYearByMonth(yearMonth);
+            var response = await _periodService.GetPeriodsAndPredictions();
 
             if (response.StatusCode == 400)
             {

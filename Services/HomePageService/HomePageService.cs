@@ -39,7 +39,7 @@
 			// Starting to fill DTO
 
 			// Period Data
-			data.PeriodData = (await _periodHistoryService.GetPeriodsByYearByMonth(DateTime.UtcNow.ToString("yyyy-MM"))).Data;
+			data.PeriodData = (await _periodHistoryService.GetPeriodsAndPredictions()).Data;
 
 			// Next period
 			if (lastPeriod != null)
