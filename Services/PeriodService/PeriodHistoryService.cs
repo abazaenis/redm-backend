@@ -223,9 +223,10 @@
         {
             // Add actual periods from database
             var periodHistory = await _context.PeriodHistory
-                .Where(ph => ph.UserId == userId &&
-                             ph.StartDate <= endOfMonth &&
-                             ph.EndDate >= startOfMonth)
+                //.Where(ph => ph.UserId == userId &&
+                //             ph.StartDate <= endOfMonth &&
+                //             ph.EndDate >= startOfMonth)
+                .Where(ph => ph.UserId == userId)
                 .OrderBy(ph => ph.StartDate)
                 .ToListAsync();
 
@@ -253,16 +254,18 @@
 
         private void AddPredictedPeriodDays(ref Dictionary<string, GetPeriodDto> periodsDictionary, int averageCycleLength, int averagePeriodLength, DateTime startOfMonth, DateTime endOfMonth, DateTime predictedStartDate)
         {
-            while (predictedStartDate <= endOfMonth)
+            var upUntil = DateTime.UtcNow.AddYears(2);
+
+            while (predictedStartDate <= upUntil)
             {
                 var predictedEndDate = predictedStartDate.AddDays(averagePeriodLength - 1);
 
-                if (predictedStartDate <= endOfMonth && predictedEndDate >= startOfMonth)
+                if (predictedStartDate <= upUntil && predictedEndDate >= startOfMonth)
                 {
                     var actualStart = predictedStartDate < startOfMonth ? startOfMonth : predictedStartDate;
                     var actualEnd = predictedEndDate > endOfMonth ? endOfMonth : predictedEndDate;
 
-                    for (var date = actualStart; date <= actualEnd; date = date.AddDays(1))
+                    for (var date = actualStart; date <= upUntil; date = date.AddDays(1))
                     {
                         var dateKey = date.ToString("yyyy-MM-dd");
 
