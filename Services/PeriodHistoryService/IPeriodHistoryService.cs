@@ -5,6 +5,8 @@
 
     public interface IPeriodHistoryService
     {
+        Task<ServiceResponse<object?>> Sync(List<DateActionDto> actions);
+
         Task<ServiceResponse<object?>> AddPeriod(AddPeriodDto period);
 
         Task<ServiceResponse<Dictionary<string, GetPeriodDto>>> GetPeriodsAndPredictions();

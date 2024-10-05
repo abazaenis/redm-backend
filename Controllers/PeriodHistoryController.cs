@@ -1,78 +1,95 @@
 ﻿namespace Redm_backend.Controllers
 {
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Dtos.PeriodHistory;
-    using Redm_backend.Models;
-    using Redm_backend.Services.PeriodService;
+	using Microsoft.AspNetCore.Authorization;
+	using Microsoft.AspNetCore.Mvc;
 
-    [Authorize]
-    [ApiController]
-    [Route("api/[controller]")]
-    public class PeriodHistoryController : ControllerBase
-    {
-        private readonly IPeriodHistoryService _periodService;
+	using Redm_backend.Dtos.PeriodHistory;
+	using Redm_backend.Models;
+	using Redm_backend.Services.PeriodService;
 
-        public PeriodHistoryController(IPeriodHistoryService periodService)
-        {
-            _periodService = periodService;
-        }
+	using Swashbuckle.AspNetCore.Annotations;
 
-        [HttpPost("AddPeriod")]
-        public async Task<ActionResult<ServiceResponse<object?>>> AddPeriod(AddPeriodDto period)
-        {
-            var response = await _periodService.AddPeriod(period);
+	[Authorize]
+	[ApiController]
+	[Route("api/[controller]")]
+	public class PeriodHistoryController : ControllerBase
+	{
+		private readonly IPeriodHistoryService _periodService;
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+		public PeriodHistoryController(IPeriodHistoryService periodService)
+		{
+			_periodService = periodService;
+		}
 
-            return Created(string.Empty, response);
-        }
+		[HttpPost("Sync")]
+		[SwaggerOperation(Description = "The 'action' field must be 'Add' or 'Delete' and hours, minutes and seconds in 'date' should be 0.")]
+		public async Task<ActionResult<ServiceResponse<object?>>> Sync(List<DateActionDto> actions)
+		{
+			var response = await _periodService.Sync(actions);
 
-        [HttpGet("GetPeriodsAndPredictions")]
-        public async Task<ActionResult<ServiceResponse<Dictionary<string, GetPeriodDto>>>> GetPeriodsAndPredictions()
-        {
-            var response = await _periodService.GetPeriodsAndPredictions();
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+			return Ok(response);
+		}
 
-            return Ok(response);
-        }
+		[HttpPost("AddPeriod")]
+		public async Task<ActionResult<ServiceResponse<object?>>> AddPeriod(AddPeriodDto period)
+		{
+			var response = await _periodService.AddPeriod(period);
 
-        [HttpPatch("UpdatePeriod")]
-        public async Task<ActionResult<ServiceResponse<object?>>> UpdatePeriod(UpdatePeriodDto period)
-        {
-            var response = await _periodService.UpdatePeriod(period);
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+			return Created(string.Empty, response);
+		}
 
-            if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpGet("GetPeriodsAndPredictions")]
+		public async Task<ActionResult<ServiceResponse<Dictionary<string, GetPeriodDto>>>> GetPeriodsAndPredictions()
+		{
+			var response = await _periodService.GetPeriodsAndPredictions();
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-        [HttpDelete("DeletePeriod")]
-        public async Task<ActionResult<ServiceResponse<object?>>> DeletePeriod(int periodId)
-        {
-            var response = await _periodService.DeletePeriod(periodId);
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 404)
-            {
-                return BadRequest(response);
-            }
+		[HttpPatch("UpdatePeriod")]
+		public async Task<ActionResult<ServiceResponse<object?>>> UpdatePeriod(UpdatePeriodDto period)
+		{
+			var response = await _periodService.UpdatePeriod(period);
 
-            return Ok(response);
-        }
-    }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
+			return Ok(response);
+		}
+
+		[HttpDelete("DeletePeriod")]
+		public async Task<ActionResult<ServiceResponse<object?>>> DeletePeriod(int periodId)
+		{
+			var response = await _periodService.DeletePeriod(periodId);
+
+			if (response.StatusCode == 404)
+			{
+				return BadRequest(response);
+			}
+
+			return Ok(response);
+		}
+	}
 }
