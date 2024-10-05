@@ -31,7 +31,7 @@
             return Created(string.Empty, response);
         }
 
-        [HttpGet("GetPeriodsByYearByMonth")]
+        [HttpGet("GetPeriodsAndPredictions")]
         public async Task<ActionResult<ServiceResponse<Dictionary<string, GetPeriodDto>>>> GetPeriodsAndPredictions()
         {
             var response = await _periodService.GetPeriodsAndPredictions();
