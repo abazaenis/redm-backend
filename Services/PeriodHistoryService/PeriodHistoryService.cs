@@ -290,25 +290,27 @@
 				.OrderBy(ph => ph.StartDate)
 				.ToListAsync();
 
-			for (var i = 0; i < periodHistory.Count; i++)
+			foreach (var period in periodHistory)
 			{
-				var startDate = DateTime.SpecifyKind(periodHistory[i].StartDate, DateTimeKind.Utc);
-				var endDate = DateTime.SpecifyKind(periodHistory[i].EndDate, DateTimeKind.Utc);
+				var startDate = DateTime.SpecifyKind(period.StartDate, DateTimeKind.Utc);
+				var endDate = DateTime.SpecifyKind(period.EndDate, DateTimeKind.Utc);
+				int counter = 1;
 
 				for (var date = startDate; date <= endDate; date = date.AddDays(1))
 				{
 					var periodDto = new GetPeriodDto
 					{
-						Id = periodHistory[i].Id,
+						Id = period.Id,
 						Selected = true,
 						Color = CalendarColor.Period,
 						TextColor = "#000",
 						StartingDay = date == startDate,
 						EndingDay = date == endDate,
-						DayIndex = i + 1,
+						DayIndex = counter,
 					};
 
 					periodsDictionary[date.ToString("yyyy-MM-dd")] = periodDto;
+					counter++;
 				}
 			}
 		}
