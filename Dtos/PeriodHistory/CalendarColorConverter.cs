@@ -15,7 +15,7 @@
         {
             var colorString = value switch
             {
-                CalendarColor.Period => "#FBD5E0",
+                CalendarColor.Period => "#F1B1D8",
                 CalendarColor.Fertile => "#D0F2E2",
                 CalendarColor.Ovulation => "#FFEB4D",
                 CalendarColor.Prediction => "#FFF0F4",
