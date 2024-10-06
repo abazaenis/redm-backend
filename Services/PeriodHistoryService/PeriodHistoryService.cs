@@ -1,9 +1,9 @@
 ﻿namespace Redm_backend.Services.PeriodService
 {
-	using Microsoft.EntityFrameworkCore;
-	using Microsoft.Extensions.Logging;
+	using System;
 
-	using Redm_backend.Controllers;
+	using Microsoft.EntityFrameworkCore;
+
 	using Redm_backend.Data;
 	using Redm_backend.Dtos.PeriodHistory;
 	using Redm_backend.Models;
@@ -14,14 +14,12 @@
 		private readonly DataContext _context;
 		private readonly IUserService _userService;
 		private readonly IHttpContextAccessor _httpContextAccessor;
-		private readonly ILogger<PeriodHistoryController> _logger;
 
-		public PeriodHistoryService(DataContext context, IUserService userService, IHttpContextAccessor httpContextAccessor, ILogger<PeriodHistoryController> logger)
+		public PeriodHistoryService(DataContext context, IUserService userService, IHttpContextAccessor httpContextAccessor)
 		{
 			_context = context;
 			_userService = userService;
 			_httpContextAccessor = httpContextAccessor;
-			_logger = logger;
 		}
 
 		public async Task<ServiceResponse<object?>> Sync(List<DateActionDto> actions)
@@ -31,14 +29,14 @@
 			if (actions is null)
 			{
 				response.StatusCode = 400;
-				response.DebugMessage = "Actions must not be null";
+				response.DebugMessage = "Akcije ne mogu biti null";
 				return response;
 			}
 
 			if (actions.Count == 0)
 			{
 				response.StatusCode = 400;
-				response.DebugMessage = "Actions array must have at least one action.";
+				response.DebugMessage = "Akcije moraju imati makar jednu akciju.";
 				return response;
 			}
 
@@ -53,23 +51,48 @@
 											   .Where(ph => (ph.UserId == userId &&
 															(ph.StartDate >= smallestDateStart && ph.StartDate <= largestDateEnd)) ||
 															(ph.EndDate >= smallestDateStart && ph.EndDate <= largestDateEnd))
+											   .OrderBy(ph => ph.StartDate)
 											   .ToListAsync();
 
 			foreach (var action in actions)
 			{
 				action.Date = new DateTime(action.Date.Year, action.Date.Month, action.Date.Day, 0, 0, 0, 0);
 
-				if (action.Action == ActionType.Delete)
+				if (action.Action == ActionType.Add)
 				{
-					if (periodsInRange is null || periodsInRange.Count == 0)
+					if (periodsInRange.Count == 0)
 					{
-						response.StatusCode = 400;
+						var newPeriod = new PeriodHistory
+						{
+							UserId = userId,
+							StartDate = DateTime.SpecifyKind(action.Date, DateTimeKind.Utc),
+							EndDate = DateTime.SpecifyKind(action.Date, DateTimeKind.Utc),
+						};
+
+						_context.PeriodHistory.Add(newPeriod);
+						periodsInRange.Add(newPeriod);
+					}
+					else
+					{
+						HandleAddPeriodDay(periodsInRange, action.Date, 0, periodsInRange.Count - 1, response);
+					}
+				}
+				else if (action.Action == ActionType.Delete)
+				{
+					if (periodsInRange.Count == 0)
+					{
+						response.StatusCode = 404;
 						response.DebugMessage = $"Nema perioda za obrisati na datum: {action.Date}";
 						return response;
 					}
 
-					DeletePeriodDay(periodsInRange, action.Date, 0, periodsInRange.Count - 1, response);
+					HandleDeletePeriodDay(periodsInRange, action.Date, 0, periodsInRange.Count - 1, response);
 				}
+			}
+
+			if (response.StatusCode == 200)
+			{
+				await _context.SaveChangesAsync();
 			}
 
 			return response;
@@ -428,41 +451,22 @@
 			}
 		}
 
-		private void DeletePeriodDay(List<PeriodHistory> periodsInRange, DateTime date, int firstIndex, int secondIndex, ServiceResponse<object?> response)
+		private void HandleDeletePeriodDay(List<PeriodHistory> periodsInRange, DateTime date, int firstIndex, int secondIndex, ServiceResponse<object?> response)
 		{
-			// Base case: if the search space is reduced to a single element
 			if (firstIndex == secondIndex)
 			{
 				var period = periodsInRange[firstIndex];
 				if (date >= period.StartDate && date <= period.EndDate)
 				{
-					response.DebugMessage += $"Found period: {period.StartDate} to {period.EndDate}\n";
+					DeletePeriodDay(periodsInRange, period, date);
 					return;
 				}
 
-				// If not found, we need to find the closest previous and next periods
-				var previousPeriod = periodsInRange.Where(p => p.EndDate < date).OrderByDescending(p => p.EndDate).FirstOrDefault();
-				var nextPeriod = periodsInRange.Where(p => p.StartDate > date).OrderBy(p => p.StartDate).FirstOrDefault();
-
-				if (previousPeriod != null)
-				{
-					response.DebugMessage += $"Closest previous period: {previousPeriod.StartDate} to {previousPeriod.EndDate}\n";
-				}
-
-				if (nextPeriod != null)
-				{
-					response.DebugMessage += $"Closest next period: {nextPeriod.StartDate} to {nextPeriod.EndDate}\n";
-				}
-
-				if (previousPeriod == null && nextPeriod == null)
-				{
-					response.DebugMessage += "No surrounding periods found.\n";
-				}
-
+				response.DebugMessage = $"Nema perioda za obrisati na datum: {date}";
+				response.StatusCode = 404;
 				return;
 			}
 
-			// If the difference between first and second is 1, check both intervals
 			if (Math.Abs(firstIndex - secondIndex) == 1)
 			{
 				var firstPeriod = periodsInRange[firstIndex];
@@ -470,54 +474,294 @@
 
 				if (date >= firstPeriod.StartDate && date <= firstPeriod.EndDate)
 				{
-					response.DebugMessage += $"FIRST INSTANCE: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
+					DeletePeriodDay(periodsInRange, firstPeriod, date);
 					return;
 				}
 
 				if (date >= secondPeriod.StartDate && date <= secondPeriod.EndDate)
 				{
-					response.DebugMessage += $"SECOND INSTANCE: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
+					DeletePeriodDay(periodsInRange, secondPeriod, date);
 					return;
 				}
 
-				// If not found in these two periods, find the closest left and right periods
-				var previousPeriod = periodsInRange.Where(p => p.EndDate < date).OrderByDescending(p => p.EndDate).FirstOrDefault();
-				var nextPeriod = periodsInRange.Where(p => p.StartDate > date).OrderBy(p => p.StartDate).FirstOrDefault();
-
-				if (previousPeriod != null)
-				{
-					response.DebugMessage += $"Closest previous period: {previousPeriod.StartDate} to {previousPeriod.EndDate}\n";
-				}
-
-				if (nextPeriod != null)
-				{
-					response.DebugMessage += $"Closest next period: {nextPeriod.StartDate} to {nextPeriod.EndDate}\n";
-				}
-
+				response.DebugMessage = $"Nema perioda za obrisati na datum: {date}";
+				response.StatusCode = 404;
 				return;
 			}
 
-			// Binary search: check the middle element
 			int midIndex = (firstIndex + secondIndex) / 2;
 			var midPeriod = periodsInRange[midIndex];
 
-			// Check if the date falls within the middle period
 			if (date >= midPeriod.StartDate && date <= midPeriod.EndDate)
 			{
-				response.DebugMessage += $"Found period: {midPeriod.StartDate} to {midPeriod.EndDate}\n";
+				DeletePeriodDay(periodsInRange, midPeriod, date);
 				return;
 			}
 
-			// Recur into the left or right half based on the date
 			if (date < midPeriod.StartDate)
 			{
-				// Search the left half
-				DeletePeriodDay(periodsInRange, date, firstIndex, midIndex - 1, response);
+				HandleDeletePeriodDay(periodsInRange, date, firstIndex, midIndex - 1, response);
 			}
 			else
 			{
-				// Search the right half
-				DeletePeriodDay(periodsInRange, date, midIndex + 1, secondIndex, response);
+				HandleDeletePeriodDay(periodsInRange, date, midIndex + 1, secondIndex, response);
+			}
+		}
+
+		private void DeletePeriodDay(List<PeriodHistory> periodsInRange, PeriodHistory period, DateTime date)
+		{
+			if (date == period.StartDate)
+			{
+				if (period.StartDate == period.EndDate)
+				{
+					_context.PeriodHistory.Remove(period);
+					periodsInRange.Remove(period);
+				}
+				else
+				{
+					period.StartDate = period.StartDate.AddDays(1);
+				}
+			}
+			else if (date == period.EndDate)
+			{
+				if (period.EndDate == period.StartDate)
+				{
+					_context.PeriodHistory.Remove(period);
+					periodsInRange.Remove(period);
+				}
+				else
+				{
+					period.EndDate = period.EndDate.AddDays(-1);
+				}
+			}
+			else
+			{
+				_context.PeriodHistory.Remove(period);
+				periodsInRange.Remove(period);
+
+				var newPeriod1 = new PeriodHistory
+				{
+					UserId = period.UserId,
+					StartDate = DateTime.SpecifyKind(period.StartDate, DateTimeKind.Utc),
+					EndDate = DateTime.SpecifyKind(date.AddDays(-1), DateTimeKind.Utc),
+				};
+				_context.PeriodHistory.Add(newPeriod1);
+				periodsInRange.Add(newPeriod1);
+
+				var newPeriod2 = new PeriodHistory
+				{
+					UserId = period.UserId,
+					StartDate = DateTime.SpecifyKind(date.AddDays(1), DateTimeKind.Utc),
+					EndDate = DateTime.SpecifyKind(period.EndDate, DateTimeKind.Utc),
+				};
+				_context.PeriodHistory.Add(newPeriod2);
+				periodsInRange.Add(newPeriod2);
+
+				periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
+			}
+		}
+
+		private void HandleAddPeriodDay(List<PeriodHistory> periodsInRange, DateTime date, int firstIndex, int secondIndex, ServiceResponse<object?> response)
+		{
+			if (firstIndex == secondIndex)
+			{
+				var period = periodsInRange[firstIndex];
+				if (date >= period.StartDate && date <= period.EndDate)
+				{
+					response.StatusCode = 400;
+					response.DebugMessage = $"Postoji overlap sa menstruacijom: {period.StartDate} to {period.EndDate}\n";
+					return;
+				}
+
+				var previousPeriod = periodsInRange[firstIndex];
+				var nextPeriod = periodsInRange[secondIndex];
+
+				if (date > period.StartDate)
+				{
+					nextPeriod = secondIndex < periodsInRange.Count - 1 ? periodsInRange[secondIndex + 1] : null;
+				}
+				else
+				{
+					previousPeriod = firstIndex > 0 ? periodsInRange[firstIndex - 1] : null;
+				}
+
+				//if (previousPeriod != null)
+				//{
+				//	response.DebugMessage += $"Closest previous period: {previousPeriod.StartDate} to {previousPeriod.EndDate}\n";
+				//}
+
+				//if (nextPeriod != null)
+				//{
+				//	response.DebugMessage += $"Closest next period: {nextPeriod.StartDate} to {nextPeriod.EndDate}\n";
+				//}
+
+				AddPeriodDay(periodsInRange, previousPeriod, nextPeriod, date);
+
+				return;
+			}
+
+			if (Math.Abs(firstIndex - secondIndex) == 1)
+			{
+				var firstPeriod = periodsInRange[firstIndex];
+				var secondPeriod = periodsInRange[secondIndex];
+
+				if (date >= firstPeriod.StartDate && date <= firstPeriod.EndDate)
+				{
+					response.DebugMessage += $"Postoji overlap sa menstruacijom: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
+					return;
+				}
+
+				if (date >= secondPeriod.StartDate && date <= secondPeriod.EndDate)
+				{
+					response.DebugMessage += $"Postoji overlap sa menstruacijom: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
+					return;
+				}
+
+				if (date > firstPeriod.EndDate && date < secondPeriod.StartDate)
+				{
+					//response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
+					//response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
+					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
+					return;
+				}
+
+				if (date < firstPeriod.StartDate)
+				{
+					secondPeriod = firstPeriod;
+					firstPeriod = firstIndex > 0 ? periodsInRange[firstIndex - 1] : null;
+
+					//if (firstPeriod != null)
+					//{
+					//	response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
+					//}
+
+					//response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
+
+					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
+					return;
+				}
+
+				if (date > secondPeriod.EndDate)
+				{
+					firstPeriod = secondPeriod;
+					secondPeriod = secondIndex < periodsInRange.Count - 1 ? periodsInRange[secondIndex + 1] : null;
+
+					//response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
+					//if (secondPeriod != null)
+					//{
+					//	response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
+					//}
+
+					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
+					return;
+				}
+
+				return;
+			}
+
+			int midIndex = (firstIndex + secondIndex) / 2;
+			var midPeriod = periodsInRange[midIndex];
+
+			if (date >= midPeriod.StartDate && date <= midPeriod.EndDate)
+			{
+				response.DebugMessage += $"Postoji overlap sa menstruacijom: {midPeriod.StartDate} to {midPeriod.EndDate}\n";
+				return;
+			}
+
+			if (date < midPeriod.StartDate)
+			{
+				HandleAddPeriodDay(periodsInRange, date, firstIndex, midIndex - 1, response);
+			}
+			else
+			{
+				HandleAddPeriodDay(periodsInRange, date, midIndex + 1, secondIndex, response);
+			}
+		}
+
+		private void AddPeriodDay(List<PeriodHistory> periodsInRange, PeriodHistory firstPeriod, PeriodHistory? secondPeriod, DateTime date)
+		{
+			if (firstPeriod == null && secondPeriod == null)
+			{
+				var newPeriod = new PeriodHistory
+				{
+					UserId = _userService.GetUserId(),
+					StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+					EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+				};
+
+				_context.PeriodHistory.Add(newPeriod);
+				periodsInRange.Add(newPeriod);
+				periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
+			}
+			else if (firstPeriod != null && secondPeriod == null)
+			{
+				if ((int)(date - firstPeriod.EndDate).TotalDays == 1)
+				{
+					firstPeriod.EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+				}
+				else
+				{
+					var newPeriod = new PeriodHistory
+					{
+						UserId = _userService.GetUserId(),
+						StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+						EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+					};
+
+					_context.PeriodHistory.Add(newPeriod);
+					periodsInRange.Add(newPeriod);
+					periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
+				}
+			}
+			else if (firstPeriod == null && secondPeriod != null)
+			{
+				if ((int)(secondPeriod.StartDate - date).TotalDays == 1)
+				{
+					secondPeriod.StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+				}
+				else
+				{
+					var newPeriod = new PeriodHistory
+					{
+						UserId = _userService.GetUserId(),
+						StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+						EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+					};
+
+					_context.PeriodHistory.Add(newPeriod);
+					periodsInRange.Add(newPeriod);
+					periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
+				}
+			}
+			else
+			{
+				if ((date - firstPeriod!.EndDate).TotalDays > 1 && (secondPeriod!.StartDate - date).TotalDays > 1)
+				{
+					var newPeriod = new PeriodHistory
+					{
+						UserId = _userService.GetUserId(),
+						StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+						EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+					};
+
+					_context.PeriodHistory.Add(newPeriod);
+					periodsInRange.Add(newPeriod);
+					periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
+				}
+				else if ((int)(date - firstPeriod.EndDate).TotalDays == 1 && (int)(secondPeriod!.StartDate - date).TotalDays == 1)
+				{
+					firstPeriod.EndDate = secondPeriod.EndDate;
+					_context.PeriodHistory.Remove(secondPeriod);
+					periodsInRange.Remove(secondPeriod);
+				}
+				else if ((int)(date - firstPeriod.EndDate).TotalDays == 1)
+				{
+					firstPeriod.EndDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+				}
+				else if ((int)(secondPeriod!.StartDate - date).TotalDays == 1)
+				{
+					secondPeriod.StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+				}
 			}
 		}
 	}

@@ -32,6 +32,11 @@
 				return BadRequest(response);
 			}
 
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
 			return Ok(response);
 		}
 
