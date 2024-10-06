@@ -16,5 +16,7 @@
         public bool StartingDay { get; set; } = false;
 
         public bool EndingDay { get; set; } = false;
+
+        public int DayIndex { get; set; }
     }
 }

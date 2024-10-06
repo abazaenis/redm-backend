@@ -182,6 +182,7 @@
 				});
 			}
 
+			pastPeriods.Reverse();
 			data.PastPeriods = pastPeriods;
 		}
 	}

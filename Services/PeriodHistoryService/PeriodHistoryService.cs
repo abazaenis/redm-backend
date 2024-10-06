@@ -290,21 +290,22 @@
 				.OrderBy(ph => ph.StartDate)
 				.ToListAsync();
 
-			foreach (var period in periodHistory)
+			for (var i = 0; i < periodHistory.Count; i++)
 			{
-				var startDate = DateTime.SpecifyKind(period.StartDate, DateTimeKind.Utc);
-				var endDate = DateTime.SpecifyKind(period.EndDate, DateTimeKind.Utc);
+				var startDate = DateTime.SpecifyKind(periodHistory[i].StartDate, DateTimeKind.Utc);
+				var endDate = DateTime.SpecifyKind(periodHistory[i].EndDate, DateTimeKind.Utc);
 
 				for (var date = startDate; date <= endDate; date = date.AddDays(1))
 				{
 					var periodDto = new GetPeriodDto
 					{
-						Id = period.Id,
+						Id = periodHistory[i].Id,
 						Selected = true,
 						Color = CalendarColor.Period,
 						TextColor = "#000",
 						StartingDay = date == startDate,
 						EndingDay = date == endDate,
+						DayIndex = i + 1,
 					};
 
 					periodsDictionary[date.ToString("yyyy-MM-dd")] = periodDto;
@@ -321,6 +322,7 @@
 			while (predictedStartDate <= endDate)
 			{
 				var predictedEndDate = predictedStartDate.AddDays(averagePeriodLength - 1);
+				int counter = 1;
 
 				for (var date = predictedStartDate; date <= predictedEndDate; date = date.AddDays(1))
 				{
@@ -336,10 +338,13 @@
 							TextColor = "#000",
 							StartingDay = date == predictedStartDate,
 							EndingDay = date == predictedEndDate,
+							DayIndex = counter,
 						};
 
 						periodsDictionary[dateKey] = periodDto;
 					}
+
+					counter++;
 				}
 
 				predictedStartDate = predictedStartDate.AddDays(averageCycleLength);
@@ -361,9 +366,11 @@
 					TextColor = "#fff",
 					StartingDay = false,
 					EndingDay = false,
+					DayIndex = 6,
 				};
 			}
 
+			int counter = 1;
 			for (var date = fertileStart; date <= fertileEnd; date = date.AddDays(1))
 			{
 				var dateKey = date.ToString("yyyy-MM-dd");
@@ -377,8 +384,11 @@
 						TextColor = "#fff",
 						StartingDay = date == fertileStart,
 						EndingDay = date == fertileEnd,
+						DayIndex = counter,
 					};
 				}
+
+				counter++;
 			}
 		}
 
