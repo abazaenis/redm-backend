@@ -8,6 +8,7 @@ namespace Redm_backend
 	using Redm_backend.Data;
 	using Redm_backend.Dtos.PeriodHistory;
 	using Redm_backend.Services.AdminService;
+	using Redm_backend.Services.CronService;
 	using Redm_backend.Services.HomePageService;
 	using Redm_backend.Services.PeriodService;
 	using Redm_backend.Services.PostService;
@@ -60,6 +61,7 @@ namespace Redm_backend
 			builder.Services.AddScoped<IPeriodHistoryService, PeriodHistoryService>();
 			builder.Services.AddScoped<IHomePageService, HomePageService>();
 			builder.Services.AddScoped<IProductService, ProductService>();
+			builder.Services.AddScoped<ICronService, CronService>();
 			builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 				.AddJwtBearer(options =>
 				{
