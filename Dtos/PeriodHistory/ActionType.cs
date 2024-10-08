@@ -3,6 +3,6 @@
 	public enum ActionType
 	{
 		Add,
-		Delete
+		Delete,
 	}
 }

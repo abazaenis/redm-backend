@@ -2,7 +2,6 @@
 {
     using System.Text.Json;
     using System.Text.Json.Serialization;
-    using Redm_backend.Dtos.PeriodHistory;
 
     public class CalendarColorConverter : JsonConverter<CalendarColor>
     {

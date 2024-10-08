@@ -29,10 +29,11 @@
 
 			var userId = int.Parse(_httpContextAccessor.HttpContext!.User.FindFirstValue("UserId")!);
 			var userCycleDuration = int.Parse(_httpContextAccessor.HttpContext.User.FindFirstValue("CycleDuration")!);
-			var allUserPeriods = await _context.PeriodHistory.Where(ph => ph.UserId == userId)
+			var lastThreeUserPeriods = await _context.PeriodHistory.Where(ph => ph.UserId == userId)
 													 .OrderByDescending(ph => ph.StartDate)
+													 .Take(3)
 													 .ToListAsync();
-			var lastPeriod = allUserPeriods.FirstOrDefault();
+			var lastPeriod = lastThreeUserPeriods.FirstOrDefault();
 			data.PeriodData = (await _periodHistoryService.GetPeriodsAndPredictions()).Data;
 
 			if (lastPeriod == null)
@@ -48,11 +49,13 @@
 
 			CalculateNextOvulationAndFertileDay(data, nextPeriod, userCycleDuration);
 
-			CalculateAveragePeriodAndCycleLength(data, allUserPeriods);
+			CalculateAveragePeriodAndCycleLength(data, lastThreeUserPeriods);
 
-			CalculatePercentages(data, allUserPeriods, userCycleDuration);
+			CalculateLastPeriodAndCycle(data, lastThreeUserPeriods);
 
-			AddPeriodHistory(data, allUserPeriods);
+			CalculatePercentages(data, lastThreeUserPeriods, userCycleDuration);
+
+			AddPeriodHistory(data, lastThreeUserPeriods);
 
 			response.Data = data;
 			return response;
@@ -97,31 +100,87 @@
 			}
 		}
 
-		private static void CalculateAveragePeriodAndCycleLength(HomePageDataDto data, List<PeriodHistory> allUserPeriods)
+		private static void CalculateAveragePeriodAndCycleLength(HomePageDataDto data, List<PeriodHistory> lastThreeUserPeriods)
 		{
 			var totalPeriodDuration = 0;
 			var totalCycleLength = 0;
+			var minCycleLength = int.MaxValue;
+			var maxCycleLength = int.MinValue;
 
-			for (int i = 0; i < allUserPeriods.Count; i++)
+			for (int i = 0; i < lastThreeUserPeriods.Count; i++)
 			{
-				var period = allUserPeriods[i];
+				var period = lastThreeUserPeriods[i];
 				totalPeriodDuration += (period.EndDate - period.StartDate).Days + 1;
 
 				if (i > 0)
 				{
-					totalCycleLength += (allUserPeriods[i - 1].StartDate - period.StartDate).Days;
+					var cycleLength = (lastThreeUserPeriods[i - 1].StartDate - period.StartDate).Days;
+
+					totalCycleLength += cycleLength;
+
+					minCycleLength = cycleLength < minCycleLength ? cycleLength : minCycleLength;
+					maxCycleLength = cycleLength > maxCycleLength ? cycleLength : maxCycleLength;
 				}
 			}
 
-			data.AveragePeriodDuration = totalPeriodDuration / allUserPeriods.Count;
-
-			if (allUserPeriods.Count > 1)
+			if (lastThreeUserPeriods.Count > 0)
 			{
-				data.AverageCycleDuration = totalCycleLength / (allUserPeriods.Count - 1);
+				data.AveragePeriodLength!.Value = totalPeriodDuration / lastThreeUserPeriods.Count;
+				data.AveragePeriodLength.Status = CalculatePeriodLengthStatus((double)data.AveragePeriodLength.Value);
 			}
 			else
 			{
-				data.AverageCycleDuration = null;
+				data.AveragePeriodLength = null;
+			}
+
+			if (lastThreeUserPeriods.Count > 1)
+			{
+				data.AverageCycleLength!.Value = totalCycleLength / (lastThreeUserPeriods.Count - 1);
+				data.AverageCycleLength.Status = CalculateCycleLengthStatus((double)data.AverageCycleLength.Value);
+
+				var variationStatusFirst = CalculateCycleLengthStatus(minCycleLength);
+				var variationStatusSecond = CalculateCycleLengthStatus(maxCycleLength);
+
+				data.CycleLengthVariation!.Value = Convert.ToString($"{minCycleLength} - {maxCycleLength}");
+
+				if (variationStatusFirst == Status.Abnormal || variationStatusSecond == Status.Abnormal)
+				{
+					data.CycleLengthVariation.Status = Status.Abnormal;
+				}
+				else if (variationStatusFirst == Status.Warning || variationStatusSecond == Status.Warning)
+				{
+					data.CycleLengthVariation.Status = Status.Warning;
+				}
+				else
+				{
+					data.CycleLengthVariation.Status = Status.Normal;
+				}
+			}
+			else
+			{
+				data.AverageCycleLength = null;
+			}
+		}
+
+		private static void CalculateLastPeriodAndCycle(HomePageDataDto data, List<PeriodHistory> lastThreeUserPeriods)
+		{
+			if (lastThreeUserPeriods == null || lastThreeUserPeriods.Count == 0)
+			{
+				throw new ArgumentException("Lista menstruacija ne može biti prazna.", nameof(lastThreeUserPeriods));
+			}
+
+			lastThreeUserPeriods = lastThreeUserPeriods.OrderBy(p => p.StartDate).ToList();
+			var lastPeriod = lastThreeUserPeriods.Last();
+			int lastPeriodDuration = (lastPeriod.EndDate - lastPeriod.StartDate).Days + 1;
+
+			data.PreviousPeriodLength!.Value = lastPeriodDuration;
+			data.PreviousPeriodLength.Status = CalculatePeriodLengthStatus(lastPeriodDuration);
+
+			if (lastThreeUserPeriods.Count > 1)
+			{
+				var lastIndex = lastThreeUserPeriods.Count - 1;
+				data.PreviousCycleLength!.Value = (lastThreeUserPeriods[lastIndex].StartDate - lastThreeUserPeriods[lastIndex - 1].StartDate).Days;
+				data.PreviousCycleLength.Status = CalculateCycleLengthStatus((double)data.PreviousCycleLength.Value);
 			}
 		}
 
@@ -184,6 +243,58 @@
 
 			pastPeriods.Reverse();
 			data.PastPeriods = pastPeriods;
+		}
+
+		private static Status CalculatePeriodLengthStatus(double periodDuration)
+		{
+			if (periodDuration < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(periodDuration), "Menstruacija ne može trajati manje od 0 dana.");
+			}
+
+			const double normalMinDuration = 3;
+			const double normalMaxDuration = 8;
+			const double warningDurationThreshold = 10;
+
+			if (periodDuration >= normalMinDuration && periodDuration <= normalMaxDuration)
+			{
+				return Status.Normal;
+			}
+			else if ((periodDuration > normalMaxDuration && periodDuration <= warningDurationThreshold) || (periodDuration >= 0 && periodDuration < normalMinDuration))
+			{
+				return Status.Warning;
+			}
+			else
+			{
+				return Status.Abnormal;
+			}
+		}
+
+		private static Status CalculateCycleLengthStatus(double cycleLength)
+		{
+			const double normalMinCycleLength = 21;
+			const double normalMaxCycleLength = 35;
+			const double warningCycleLengthThreshold = 45;
+			const double abnormalMinCycleThreshold = 16;
+
+			if (cycleLength < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(cycleLength), "Cycle length cannot be negative.");
+			}
+
+			if (cycleLength >= normalMinCycleLength && cycleLength <= normalMaxCycleLength)
+			{
+				return Status.Normal;
+			}
+			else if ((cycleLength > normalMaxCycleLength && cycleLength <= warningCycleLengthThreshold) ||
+					 (cycleLength < normalMinCycleLength && cycleLength >= abnormalMinCycleThreshold))
+			{
+				return Status.Warning;
+			}
+			else
+			{
+				return Status.Abnormal;
+			}
 		}
 	}
 }
