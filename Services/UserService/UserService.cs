@@ -1,252 +1,305 @@
 ﻿namespace Redm_backend.Services.UserService
 {
-    using System.Security.Claims;
-    using Microsoft.EntityFrameworkCore;
-    using Redm_backend.Data;
-    using Redm_backend.Dtos.User;
-    using Redm_backend.Models;
+	using System.Security.Claims;
 
-    public class UserService : IUserService
-    {
-        private readonly DataContext _context;
-        private readonly IAuthRepository _authRepository;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.IdentityModel.Tokens;
 
-        public UserService(DataContext context, IAuthRepository authRepository, IHttpContextAccessor httpContextAccessor)
-        {
-            _context = context;
-            _authRepository = authRepository;
-            _httpContextAccessor = httpContextAccessor;
-        }
+	using Redm_backend.Data;
+	using Redm_backend.Dtos.User;
+	using Redm_backend.Models;
+	public class UserService : IUserService
+	{
+		private readonly DataContext _context;
+		private readonly IAuthRepository _authRepository;
+		private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public async Task<ServiceResponse<AccessToken>> UpdateUser(UserDto user)
-        {
-            var response = new ServiceResponse<AccessToken>();
+		public UserService(DataContext context, IAuthRepository authRepository, IHttpContextAccessor httpContextAccessor)
+		{
+			_context = context;
+			_authRepository = authRepository;
+			_httpContextAccessor = httpContextAccessor;
+		}
 
-            var tempUser = new User
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-            };
+		public async Task<ServiceResponse<AccessToken>> UpdateUser(UserDto user)
+		{
+			var response = new ServiceResponse<AccessToken>();
 
-            _authRepository.CheckRegisterRequestValues(tempUser, out bool validRequest, out string message);
+			var tempUser = new User
+			{
+				FirstName = user.FirstName,
+				LastName = user.LastName,
+				Email = user.Email,
+			};
 
-            if (!validRequest)
-            {
-                response.StatusCode = 400;
-                response.Message = message;
-                return response;
-            }
+			_authRepository.CheckRegisterRequestValues(tempUser, out bool validRequest, out string message);
 
-            var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+			if (!validRequest)
+			{
+				response.StatusCode = 400;
+				response.Message = message;
+				return response;
+			}
 
-            if (userDb is null)
-            {
-                response.StatusCode = 404;
-                response.Message = "Trenutno nismo u mogućnosti da ažuriramo korisnika.";
-                response.DebugMessage = "Ne postoji korisnik sa trenutnim ID-om";
-                return response;
-            }
+			var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
 
-            var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
+			if (userDb is null)
+			{
+				response.StatusCode = 404;
+				response.Message = "Trenutno nismo u mogućnosti da ažuriramo korisnika.";
+				response.DebugMessage = "Ne postoji korisnik sa trenutnim ID-om";
+				return response;
+			}
 
-            if (createdWithGoogle && (userDb.Email != user.Email))
-            {
-                response.Message = "Ne možete promijeniti email ukoliko ste izvršili prijavu preko Googlea.";
-                response.DebugMessage = string.Empty;
-                response.StatusCode = 400;
-                return response;
-            }
+			var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
 
-            var userExists = await _context.Users.AnyAsync(u => u.Email == user.Email && u.Email != userDb.Email);
+			if (createdWithGoogle && (userDb.Email != user.Email))
+			{
+				response.Message = "Ne možete promijeniti email ukoliko ste izvršili prijavu preko Googlea.";
+				response.DebugMessage = string.Empty;
+				response.StatusCode = 400;
+				return response;
+			}
 
-            if (userExists)
-            {
-                response.StatusCode = 400;
-                response.Message = $"Korisnik '{user.Email}' već postoji.";
-                return response;
-            }
+			var userExists = await _context.Users.AnyAsync(u => u.Email == user.Email && u.Email != userDb.Email);
 
-            userDb.Email = user.Email;
-            userDb.FirstName = user.FirstName;
-            userDb.LastName = user.LastName;
-            await _context.SaveChangesAsync();
+			if (userExists)
+			{
+				response.StatusCode = 400;
+				response.Message = $"Korisnik '{user.Email}' već postoji.";
+				return response;
+			}
 
-            var newAccessToken = new AccessToken
-            {
-                NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
-            };
+			userDb.Email = user.Email;
+			userDb.FirstName = user.FirstName;
+			userDb.LastName = user.LastName;
+			await _context.SaveChangesAsync();
 
-            response.Data = newAccessToken;
-            response.Message = "Uspješno ste ažurirali profil.";
+			var newAccessToken = new AccessToken
+			{
+				NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
+			};
 
-            return response;
-        }
+			response.Data = newAccessToken;
+			response.Message = "Uspješno ste ažurirali profil.";
 
-        public async Task<ServiceResponse<object?>> UpdatePassword(UpdatePasswordDto passwordDto)
-        {
-            var response = new ServiceResponse<object?>();
+			return response;
+		}
 
-            if (passwordDto.NewPassword != passwordDto.ConfirmPassword)
-            {
-                response.StatusCode = 400;
-                response.Message = "Lozinke se ne poklapaju";
-                return response;
-            }
+		public async Task<ServiceResponse<object?>> UpdatePassword(UpdatePasswordDto passwordDto)
+		{
+			var response = new ServiceResponse<object?>();
 
-            if (passwordDto.ConfirmPassword.Length < 6)
-            {
-                response.StatusCode = 400;
-                response.Message = "Lozinka mora imati barem 6 karaktera.";
-                return response;
-            }
+			if (passwordDto.NewPassword != passwordDto.ConfirmPassword)
+			{
+				response.StatusCode = 400;
+				response.Message = "Lozinke se ne poklapaju";
+				return response;
+			}
 
-            var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+			if (passwordDto.ConfirmPassword.Length < 6)
+			{
+				response.StatusCode = 400;
+				response.Message = "Lozinka mora imati barem 6 karaktera.";
+				return response;
+			}
 
-            if (userDb is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = "Korisnik ne postoji";
-                return response;
-            }
+			var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
 
-            var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
+			if (userDb is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = "Korisnik ne postoji";
+				return response;
+			}
 
-            if (createdWithGoogle)
-            {
-                response.StatusCode = 400;
-                response.Message = "Ne možete ažurirati password ukoliko ste se prijavili preko Googlea.";
-                return response;
-            }
+			var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
 
-            if (!_authRepository.VerifyPasswordHash(passwordDto.OldPassword, userDb.PasswordHash!, userDb.PasswordSalt!))
-            {
-                response.StatusCode = 400;
-                response.Message = "Pogrešna lozinka.";
-                return response;
-            }
+			if (createdWithGoogle)
+			{
+				response.StatusCode = 400;
+				response.Message = "Ne možete ažurirati password ukoliko ste se prijavili preko Googlea.";
+				return response;
+			}
 
-            _authRepository.CreatePasswordHash(passwordDto.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
-            userDb.PasswordHash = passwordHash;
-            userDb.PasswordSalt = passwordSalt;
+			if (!_authRepository.VerifyPasswordHash(passwordDto.OldPassword, userDb.PasswordHash!, userDb.PasswordSalt!))
+			{
+				response.StatusCode = 400;
+				response.Message = "Pogrešna lozinka.";
+				return response;
+			}
 
-            await _context.SaveChangesAsync();
+			_authRepository.CreatePasswordHash(passwordDto.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
+			userDb.PasswordHash = passwordHash;
+			userDb.PasswordSalt = passwordSalt;
 
-            response.Message = "Uspješno ste ažurirali password";
+			await _context.SaveChangesAsync();
 
-            return response;
-        }
+			response.Message = "Uspješno ste ažurirali password";
 
-        public async Task<ServiceResponse<AccessToken>> UpdateCycleInfo(CycleInfoDto cycleInfo)
-        {
-            var response = new ServiceResponse<AccessToken>();
+			return response;
+		}
 
-            if (cycleInfo.PeriodDuration < 2 || cycleInfo.PeriodDuration > 10)
-            {
-                response.StatusCode = 400;
-                response.Message = "Trajanje menstruacije može biti najmanje 1 dan i najviše 10 dana.";
+		public async Task<ServiceResponse<AccessToken>> UpdateCycleInfo(CycleInfoDto cycleInfo)
+		{
+			var response = new ServiceResponse<AccessToken>();
 
-                return response;
-            }
-            else if (cycleInfo.CycleDuration < 21 || cycleInfo.CycleDuration > 45)
-            {
-                response.StatusCode = 400;
-                response.Message = "Trajanje ciklusa može biti najmanje 21 dan i najviše 45 dana.";
+			if (cycleInfo.PeriodDuration < 2 || cycleInfo.PeriodDuration > 10)
+			{
+				response.StatusCode = 400;
+				response.Message = "Trajanje menstruacije može biti najmanje 1 dan i najviše 10 dana.";
 
-                return response;
-            }
+				return response;
+			}
+			else if (cycleInfo.CycleDuration < 21 || cycleInfo.CycleDuration > 45)
+			{
+				response.StatusCode = 400;
+				response.Message = "Trajanje ciklusa može biti najmanje 21 dan i najviše 45 dana.";
 
-            var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+				return response;
+			}
 
-            if (userDb is null)
-            {
-                response.DebugMessage = "Korisnik ne postoji";
-                response.StatusCode = 404;
+			var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
 
-                return response;
-            }
+			if (userDb is null)
+			{
+				response.DebugMessage = "Korisnik ne postoji";
+				response.StatusCode = 404;
 
-            userDb.PeriodDuration = cycleInfo.PeriodDuration;
-            userDb.CycleDuration = cycleInfo.CycleDuration;
-            await _context.SaveChangesAsync();
+				return response;
+			}
 
-            var newAccessToken = new AccessToken
-            {
-                NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
-            };
+			userDb.PeriodDuration = cycleInfo.PeriodDuration;
+			userDb.CycleDuration = cycleInfo.CycleDuration;
+			await _context.SaveChangesAsync();
 
-            response.Data = newAccessToken;
-            response.DebugMessage = "Uspješno ažurirane informacije o periodu";
-            return response;
-        }
+			var newAccessToken = new AccessToken
+			{
+				NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
+			};
 
-        public async Task<ServiceResponse<AccessToken>> UpdateAvatarName(string avatarName)
-        {
-            var response = new ServiceResponse<AccessToken>();
+			response.Data = newAccessToken;
+			response.DebugMessage = "Uspješno ažurirane informacije o periodu";
+			return response;
+		}
 
-            if (avatarName.Length < 1)
-            {
-                response.StatusCode = 400;
-                response.Message = "Ime avatara mora imati makar jedan karakter";
+		public async Task<ServiceResponse<AccessToken>> UpdateAvatarName(string avatarName)
+		{
+			var response = new ServiceResponse<AccessToken>();
 
-                return response;
-            }
+			if (avatarName.Length == 0)
+			{
+				response.StatusCode = 400;
+				response.Message = "Ime avatara mora imati makar jedan karakter";
 
-            var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+				return response;
+			}
 
-            if (userDb is null)
-            {
-                response.DebugMessage = "Korisnik ne postoji";
-                response.StatusCode = 404;
+			var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
 
-                return response;
-            }
+			if (userDb is null)
+			{
+				response.DebugMessage = "Korisnik ne postoji";
+				response.StatusCode = 404;
 
-            userDb.AvatarName = avatarName;
-            await _context.SaveChangesAsync();
+				return response;
+			}
 
-            var newAccessToken = new AccessToken
-            {
-                NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
-            };
+			userDb.AvatarName = avatarName;
+			await _context.SaveChangesAsync();
 
-            response.Data = newAccessToken;
-            response.DebugMessage = "Uspješno ažurirano ime avatara.";
-            return response;
-        }
+			var newAccessToken = new AccessToken
+			{
+				NewAccessToken = _authRepository.CreateToken(userDb, userDb.PasswordHash != null),
+			};
 
-        public async Task<ServiceResponse<object?>> DeleteUser()
-        {
-            var response = new ServiceResponse<object?>();
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+			response.Data = newAccessToken;
+			response.DebugMessage = "Uspješno ažurirano ime avatara.";
+			return response;
+		}
 
-            if (user is not null)
-            {
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
+		public async Task<ServiceResponse<object?>> UpdateExpoPushToken(ExpoPushTokenDto expoPushToken)
+		{
+			var response = new ServiceResponse<object?>();
 
-                response.Message = "Uspješno ste obrisali vaš profil";
-            }
-            else
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = "Korisnik ne postoji.";
-            }
+			if (string.IsNullOrWhiteSpace(expoPushToken.ExpoPushToken))
+			{
+				response.DebugMessage = "ExpoPushToken mora imati vrijednost.";
+				response.StatusCode = 400;
 
-            return response;
-        }
+				return response;
+			}
 
-        public int GetUserId() => int.Parse(_httpContextAccessor.HttpContext!.User.FindFirstValue("UserId")!);
+			var userDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
 
-        public async Task<bool> UserExists(string email)
-        {
-            if (await _context.Users.AnyAsync(u => u.Email == email))
-            {
-                return true;
-            }
+			if (userDb is null)
+			{
+				response.DebugMessage = "Korisnik ne postoji";
+				response.StatusCode = 404;
 
-            return false;
-        }
-    }
+				return response;
+			}
+
+			userDb.ExpoPushToken = expoPushToken.ExpoPushToken;
+			await _context.SaveChangesAsync();
+
+			response.DebugMessage = "Uspješno ažuriran ExpoPushToken.";
+			return response;
+		}
+
+		public async Task<ServiceResponse<object?>> DeleteUser()
+		{
+			var response = new ServiceResponse<object?>();
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+
+			if (user is not null)
+			{
+				_context.Users.Remove(user);
+				await _context.SaveChangesAsync();
+
+				response.Message = "Uspješno ste obrisali vaš profil";
+			}
+			else
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = "Korisnik ne postoji.";
+			}
+
+			return response;
+		}
+
+		public async Task<ServiceResponse<object?>> DeleteExpoPushToken()
+		{
+			var response = new ServiceResponse<object?>();
+
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == GetUserId());
+
+			if (user is not null)
+			{
+				user.ExpoPushToken = null;
+				await _context.SaveChangesAsync();
+
+				response.Message = "Uspješno ste ugasili notifikacije.";
+			}
+			else
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = "Korisnik ne postoji.";
+			}
+
+			return response;
+		}
+
+		public int GetUserId() => int.Parse(_httpContextAccessor.HttpContext!.User.FindFirstValue("UserId")!);
+
+		public async Task<bool> UserExists(string email)
+		{
+			if (await _context.Users.AnyAsync(u => u.Email == email))
+			{
+				return true;
+			}
+
+			return false;
+		}
+	}
 }

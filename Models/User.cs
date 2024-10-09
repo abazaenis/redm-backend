@@ -26,6 +26,8 @@
 
         public RefreshToken? RefreshToken { get; set; }
 
+        public string? ExpoPushToken { get; set; }
+
         public ICollection<PeriodHistory>? PeriodHistories { get; set; }
     }
 }

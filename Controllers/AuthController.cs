@@ -1,93 +1,101 @@
 ﻿namespace Redm_backend.Controllers
 {
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Data;
-    using Redm_backend.Dtos.Auth;
-    using Redm_backend.Dtos.User;
-    using Redm_backend.Models;
+	using Microsoft.AspNetCore.Mvc;
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
-    {
-        private readonly IAuthRepository _authRepo;
+	using Redm_backend.Data;
+	using Redm_backend.Dtos.Auth;
+	using Redm_backend.Dtos.User;
+	using Redm_backend.Models;
 
-        public AuthController(IAuthRepository authRepo)
-        {
-            _authRepo = authRepo;
-        }
+	[ApiController]
+	[Route("api/[controller]")]
+	public class AuthController : ControllerBase
+	{
+		private readonly IAuthRepository _authRepo;
 
-        [HttpPost("Register")]
-        public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Register(UserRegisterDto request)
-        {
-            var response = await _authRepo.Register(
-                new Models.User { Email = request.Email, FirstName = request.FirstName, LastName = request.LastName }, request.Password);
+		public AuthController(IAuthRepository authRepo)
+		{
+			_authRepo = authRepo;
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+		[HttpPost("Register")]
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Register(UserRegisterDto request)
+		{
+			var response = await _authRepo.Register(
+				new User
+				{
+					Email = request.Email,
+					FirstName = request.FirstName,
+					LastName = request.LastName,
+					ExpoPushToken = request.ExpoPushToken,
+				},
+				request.Password);
 
-            return Created(string.Empty, response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-        [HttpPost("Login")]
-        public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Login(UserLoginDto request)
-        {
-            var response = await _authRepo.Login(request.Email, request.Password);
+			return Created(string.Empty, response);
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
-            else if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
-            else if (response.StatusCode == 409)
-            {
-                return Conflict(response);
-            }
+		[HttpPost("Login")]
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Login(UserLoginDto request)
+		{
+			var response = await _authRepo.Login(request.Email, request.Password);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+			else if (response.StatusCode == 409)
+			{
+				return Conflict(response);
+			}
 
-        [HttpPost("Refresh")]
-        public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Refresh(RefreshRequestDto request)
-        {
-            var response = await _authRepo.Refresh(request.RefreshToken);
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 401)
-            {
-                return Unauthorized("Refresh token je na crnoj listi.");
-            }
+		[HttpPost("Refresh")]
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> Refresh(RefreshRequestDto request)
+		{
+			var response = await _authRepo.Refresh(request.RefreshToken);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 401)
+			{
+				return Unauthorized("Refresh token je na crnoj listi.");
+			}
 
-        [HttpPost("GoogleSignIn")]
-        public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> GoogleSignIn(GoogleSignInVMDto model)
-        {
-            try
-            {
-                var response = await _authRepo.GoogleSignIn(model);
+			return Ok(response);
+		}
 
-                if (response.StatusCode == 201)
-                {
-                    return Created(string.Empty, response);
-                }
+		[HttpPost("GoogleSignIn")]
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> GoogleSignIn(GoogleSignInVMDto model)
+		{
+			try
+			{
+				var response = await _authRepo.GoogleSignIn(model);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                var errorResponse = new
-                {
-                    Message = "Došlo je do greške prilikom vašeg zahtjeva.",
-                    Details = ex.Message,
-                };
-                return BadRequest(errorResponse);
-            }
-        }
-    }
+				if (response.StatusCode == 201)
+				{
+					return Created(string.Empty, response);
+				}
+
+				return Ok(response);
+			}
+			catch (Exception ex)
+			{
+				var errorResponse = new
+				{
+					Message = "Došlo je do greške prilikom vašeg zahtjeva.",
+					Details = ex.Message,
+				};
+				return BadRequest(errorResponse);
+			}
+		}
+	}
 }

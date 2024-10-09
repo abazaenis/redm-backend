@@ -1,102 +1,134 @@
 ﻿namespace Redm_backend.Controllers
 {
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Dtos.User;
-    using Redm_backend.Models;
-    using Redm_backend.Services.UserService;
+	using Microsoft.AspNetCore.Authorization;
+	using Microsoft.AspNetCore.Mvc;
 
-    [Authorize]
-    [ApiController]
-    [Route("api/[controller]")]
-    public class UserController : ControllerBase
-    {
-        private readonly IUserService _userService;
+	using Redm_backend.Dtos.User;
+	using Redm_backend.Models;
+	using Redm_backend.Services.UserService;
 
-        public UserController(IUserService userService)
-        {
-            _userService = userService;
-        }
+	[Authorize]
+	[ApiController]
+	[Route("api/[controller]")]
+	public class UserController : ControllerBase
+	{
+		private readonly IUserService _userService;
 
-        [HttpPatch("UpdateUser")]
-        public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateUser(UserDto user)
-        {
-            var response = await _userService.UpdateUser(user);
+		public UserController(IUserService userService)
+		{
+			_userService = userService;
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
-            else if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpPatch("UpdateUser")]
+		public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateUser(UserDto user)
+		{
+			var response = await _userService.UpdateUser(user);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
 
-        [HttpPatch("UpdatePassword")]
-        public async Task<ActionResult<ServiceResponse<object?>>> UpdatePassword(UpdatePasswordDto user)
-        {
-            var response = await _userService.UpdatePassword(user);
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
-            else if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpPatch("UpdatePassword")]
+		public async Task<ActionResult<ServiceResponse<object?>>> UpdatePassword(UpdatePasswordDto user)
+		{
+			var response = await _userService.UpdatePassword(user);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
 
-        [HttpPatch("UpdateCycleInfo")]
-        public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateCycleInfo(CycleInfoDto cycleInfo)
-        {
-            var response = await _userService.UpdateCycleInfo(cycleInfo);
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
-            else if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpPatch("UpdateCycleInfo")]
+		public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateCycleInfo(CycleInfoDto cycleInfo)
+		{
+			var response = await _userService.UpdateCycleInfo(cycleInfo);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
 
-        [HttpPatch("UpdateAvatarName")]
-        public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateAvatarName(string avatarName)
-        {
-            var response = await _userService.UpdateAvatarName(avatarName);
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
-            else if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpPatch("UpdateAvatarName")]
+		public async Task<ActionResult<ServiceResponse<AccessToken>>> UpdateAvatarName(string avatarName)
+		{
+			var response = await _userService.UpdateAvatarName(avatarName);
 
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
 
-        [HttpDelete("DeleteUser")]
-        public async Task<ActionResult<ServiceResponse<object?>>> DeleteUser()
-        {
-            var response = await _userService.DeleteUser();
+			return Ok(response);
+		}
 
-            if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+		[HttpPatch("UpdateExpoPushToken")]
+		public async Task<ActionResult<ServiceResponse<object?>>> UpdateExpoPushToken(ExpoPushTokenDto expoPushToken)
+		{
+			var response = await _userService.UpdateExpoPushToken(expoPushToken);
 
-            return Ok(response);
-        }
-    }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
+			return Ok(response);
+		}
+
+		[HttpDelete("DeleteExpoPushToken")]
+		public async Task<ActionResult<ServiceResponse<object?>>> DeleteExpoPushToken()
+		{
+			var response = await _userService.DeleteExpoPushToken();
+
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
+			return Ok(response);
+		}
+
+		[HttpDelete("DeleteUser")]
+		public async Task<ActionResult<ServiceResponse<object?>>> DeleteUser()
+		{
+			var response = await _userService.DeleteUser();
+
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
+			return Ok(response);
+		}
+	}
 }
