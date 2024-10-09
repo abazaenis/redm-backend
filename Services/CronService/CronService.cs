@@ -55,30 +55,30 @@
 				response.DebugMessage = "Nema korisnika kojima menstruacija za 5 dana.";
 			}
 
-			response.Data = pushTokensPeriodIn5Days;
-			return response;
-
-			//var pushTicketReq = new PushTicketRequest()
-			//{
-			//	PushTo = pushTokensPeriodIn5Days,
-			//	PushBadgeCount = 7,
-			//	PushBody = Convert.ToString(DateTime.UtcNow),
-			//};
-
-			//var result = await _expoSDKClient.PushSendAsync(pushTicketReq);
-			//var responseData = new List<string>();
-
-			//if (result?.PushTicketErrors?.Any() == true)
-			//{
-			//	foreach (var error in result.PushTicketErrors)
-			//	{
-			//		responseData.Add($"Error: {error.ErrorCode} - {error.ErrorMessage}");
-			//	}
-
-			//	response.Data = responseData;
-			//}
-
+			//response.Data = pushTokensPeriodIn5Days;
 			//return response;
+
+			var pushTicketReq = new PushTicketRequest()
+			{
+				PushTo = pushTokensPeriodIn5Days,
+				PushBadgeCount = 7,
+				PushBody = Convert.ToString(DateTime.UtcNow),
+			};
+
+			var result = await _expoSDKClient.PushSendAsync(pushTicketReq);
+			var responseData = new List<string>();
+
+			if (result?.PushTicketErrors?.Any() == true)
+			{
+				foreach (var error in result.PushTicketErrors)
+				{
+					responseData.Add($"Error: {error.ErrorCode} - {error.ErrorMessage}");
+				}
+
+				response.Data = responseData;
+			}
+
+			return response;
 		}
 
 		private async Task<List<string>> PeriodNotification5Days()
@@ -108,7 +108,7 @@
 
 					return predictedPeriodStart == targetDate;
 				})
-				.Select(x => x.User.ExpoPushToken == null ? string.Empty : x.User.ExpoPushToken)
+				.Select(x => x.User.ExpoPushToken)
 				.ToList();
 
 			return userExpoTokensWithPeriodIn5Days;

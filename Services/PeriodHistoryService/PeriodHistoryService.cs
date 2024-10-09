@@ -54,9 +54,6 @@
 				.OrderBy(ph => ph.StartDate)
 				.ToListAsync();
 
-			response.Data = periodsInRange;
-			return response;
-
 			foreach (var action in actions)
 			{
 				action.Date = new DateTime(action.Date.Year, action.Date.Month, action.Date.Day, 0, 0, 0, 0);
