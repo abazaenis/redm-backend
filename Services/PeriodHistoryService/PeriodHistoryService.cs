@@ -48,11 +48,14 @@
 			var largestDateEnd = new DateTime(largestDate.Year, largestDate.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1);
 
 			var periodsInRange = await _context.PeriodHistory
-											   .Where(ph => (ph.UserId == userId &&
-															(ph.StartDate >= smallestDateStart && ph.StartDate <= largestDateEnd)) ||
-															(ph.EndDate >= smallestDateStart && ph.EndDate <= largestDateEnd))
-											   .OrderBy(ph => ph.StartDate)
-											   .ToListAsync();
+				.Where(ph => ph.UserId == userId &&
+                ((ph.StartDate >= smallestDateStart && ph.StartDate <= largestDateEnd) ||
+                (ph.EndDate >= smallestDateStart && ph.EndDate <= largestDateEnd)))
+				.OrderBy(ph => ph.StartDate)
+				.ToListAsync();
+
+			response.Data = periodsInRange;
+			return response;
 
 			foreach (var action in actions)
 			{
