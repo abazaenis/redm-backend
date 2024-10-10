@@ -74,7 +74,17 @@
 					PushBody = "CickoMicko: Menstruacija Vam počinje sutra.",
 				};
 
-				await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn1Day);
+				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn1Day);
+
+				if (result?.PushTicketErrors?.Count() > 0)
+				{
+					int counter = 1;
+					foreach (var error in result.PushTicketErrors)
+					{
+						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
+						response.StatusCode = 500;
+					}
+				}
 			}
 
 			if (pushTokensPeriodIn5Days != null && pushTokensPeriodIn5Days.Count != 0)
@@ -86,7 +96,17 @@
 					PushBody = "CickoMicko: Menstruacija Vam počinje za 5 dana.",
 				};
 
-				await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn5Days);
+				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn5Days);
+
+				if (result?.PushTicketErrors?.Count() > 0)
+				{
+					int counter = 1;
+					foreach (var error in result.PushTicketErrors)
+					{
+						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
+						response.StatusCode = 500;
+					}
+				}
 			}
 
 			if (pushTokensOvulationToday != null && pushTokensOvulationToday.Count != 0)
@@ -98,7 +118,17 @@
 					PushBody = "CickoMicko: Danas Vam je ovulacija.",
 				};
 
-				await _expoSDKClient.PushSendAsync(pushTicketReqOvulationToday);
+				var result = await _expoSDKClient.PushSendAsync(pushTicketReqOvulationToday);
+
+				if (result?.PushTicketErrors?.Count() > 0)
+				{
+					int counter = 1;
+					foreach (var error in result.PushTicketErrors)
+					{
+						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
+						response.StatusCode = 500;
+					}
+				}
 			}
 
 			if (pushTokensFertileDaysStartToday != null && pushTokensFertileDaysStartToday.Count != 0)
@@ -110,11 +140,22 @@
 					PushBody = "CickoMicko: Danas Vam počinju plodni dani.",
 				};
 
-				await _expoSDKClient.PushSendAsync(pushTicketReqFertileDaysStartToday);
+				var result = await _expoSDKClient.PushSendAsync(pushTicketReqFertileDaysStartToday);
+
+				if (result?.PushTicketErrors?.Count() > 0)
+				{
+					int counter = 1;
+					foreach (var error in result.PushTicketErrors)
+					{
+						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
+						response.StatusCode = 500;
+					}
+				}
 			}
 
 			return response;
 		}
+
 
 		private static List<string> GetUsersWithPeriodIn1Day(List<UserLastPeriodDto> usersWithDbEntries)
 		{

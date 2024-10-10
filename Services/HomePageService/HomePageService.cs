@@ -159,6 +159,7 @@
 			else
 			{
 				data.AverageCycleLength = null;
+				data.CycleLengthVariation = null;
 			}
 		}
 
@@ -181,6 +182,10 @@
 				var lastIndex = lastThreeUserPeriods.Count - 1;
 				data.PreviousCycleLength!.Value = (lastThreeUserPeriods[lastIndex].StartDate - lastThreeUserPeriods[lastIndex - 1].StartDate).Days;
 				data.PreviousCycleLength.Status = CalculateCycleLengthStatus((double)data.PreviousCycleLength.Value);
+			}
+			else
+			{
+				data.PreviousCycleLength = null;
 			}
 		}
 
