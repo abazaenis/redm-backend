@@ -4,8 +4,10 @@
 
 	public interface ICronService
 	{
-		Task<ServiceResponse<object?>> DeleteOldPeriods();
-
 		Task<ServiceResponse<List<string>?>> SendDailyNotifications();
+
+		Task<ServiceResponse<object?>> GetAndProcessReceipts();
+
+		Task<ServiceResponse<object?>> DeleteOldPeriods();
 	}
 }

@@ -1,5 +1,10 @@
 ﻿namespace Redm_backend.Services.CronService
 {
+	using System.Text;
+
+	using Azure.Storage.Blobs;
+	using Azure.Storage.Blobs.Specialized;
+
 	using Expo.Server.Client;
 	using Expo.Server.Models;
 
@@ -12,42 +17,20 @@
 	public class CronService : ICronService
 	{
 		private readonly DataContext _context;
+		private readonly BlobServiceClient _blobServiceClient;
 		private readonly PushApiClient _expoSDKClient;
 
-		public CronService(DataContext context)
+		public CronService(DataContext context, BlobServiceClient blobServiceClient)
 		{
 			_context = context;
+			_blobServiceClient = blobServiceClient;
 			_expoSDKClient = new PushApiClient();
-		}
-
-		public async Task<ServiceResponse<object?>> DeleteOldPeriods()
-		{
-			var response = new ServiceResponse<object?>();
-
-			var now = DateTime.UtcNow;
-			var dateDeletionThreshold = new DateTime(now.AddYears(-1).Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-
-			var oldPeriods = await _context.PeriodHistory.Where(p => p.EndDate < dateDeletionThreshold).ToListAsync();
-
-			if (oldPeriods.Any())
-			{
-				_context.PeriodHistory.RemoveRange(oldPeriods);
-
-				await _context.SaveChangesAsync();
-
-				response.DebugMessage = $"Uspješno obrisano {oldPeriods.Count} starih zapisa o periodima.";
-			}
-			else
-			{
-				response.DebugMessage = "Nema starih zapisa o periodima za brisanje.";
-			}
-
-			return response;
 		}
 
 		public async Task<ServiceResponse<List<string>?>> SendDailyNotifications()
 		{
 			var response = new ServiceResponse<List<string>?>();
+			var ticketIds = new List<string>();
 
 			var usersWithDbEntries = await GetUsersWithDbEntries();
 
@@ -75,16 +58,9 @@
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn1Day);
+				ticketIds.AddRange(result.PushTicketStatuses.Select(ticket => ticket.TicketId));
 
-				if (result?.PushTicketErrors?.Count() > 0)
-				{
-					int counter = 1;
-					foreach (var error in result.PushTicketErrors)
-					{
-						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
-						response.StatusCode = 500;
-					}
-				}
+				CheckNotificationPushResultErrors(result, response);
 			}
 
 			if (pushTokensPeriodIn5Days != null && pushTokensPeriodIn5Days.Count != 0)
@@ -97,16 +73,9 @@
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn5Days);
+				ticketIds.AddRange(result.PushTicketStatuses.Select(ticket => ticket.TicketId));
 
-				if (result?.PushTicketErrors?.Count() > 0)
-				{
-					int counter = 1;
-					foreach (var error in result.PushTicketErrors)
-					{
-						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
-						response.StatusCode = 500;
-					}
-				}
+				CheckNotificationPushResultErrors(result, response);
 			}
 
 			if (pushTokensOvulationToday != null && pushTokensOvulationToday.Count != 0)
@@ -119,16 +88,9 @@
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqOvulationToday);
+				ticketIds.AddRange(result.PushTicketStatuses.Select(ticket => ticket.TicketId));
 
-				if (result?.PushTicketErrors?.Count() > 0)
-				{
-					int counter = 1;
-					foreach (var error in result.PushTicketErrors)
-					{
-						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
-						response.StatusCode = 500;
-					}
-				}
+				CheckNotificationPushResultErrors(result, response);
 			}
 
 			if (pushTokensFertileDaysStartToday != null && pushTokensFertileDaysStartToday.Count != 0)
@@ -141,21 +103,80 @@
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqFertileDaysStartToday);
+				ticketIds.AddRange(result.PushTicketStatuses.Select(ticket => ticket.TicketId));
 
-				if (result?.PushTicketErrors?.Count() > 0)
+				CheckNotificationPushResultErrors(result, response);
+			}
+
+			await SaveTicketIdsToBlobAsync(ticketIds);
+
+			return response;
+		}
+
+		public async Task<ServiceResponse<object?>> GetAndProcessReceipts()
+		{
+			var response = new ServiceResponse<object?>();
+			var ticketIds = await ReadTicketIdsFromBlobAsync();
+			if (ticketIds == null || !ticketIds.Any())
+			{
+				response.Message = "Text fajl 'notifications-data' ne sadrži nijedan ticketId";
+			}
+
+			var pushReceiptReq = new PushReceiptRequest { PushTicketIds = ticketIds };
+			var pushReceiptResult = await _expoSDKClient.PushGetReceiptsAsync(pushReceiptReq);
+
+			foreach (var pushReceipt in pushReceiptResult.PushTicketReceipts)
+			{
+				if (pushReceipt.Value.DeliveryStatus == "error")
 				{
-					int counter = 1;
-					foreach (var error in result.PushTicketErrors)
-					{
-						response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
-						response.StatusCode = 500;
-					}
+					var errorLog = $"TicketId: {pushReceipt.Key}, Error: {pushReceipt.Value.DeliveryStatus}, Message: {pushReceipt.Value.DeliveryMessage}";
+					await AppendErrorLogToBlobAsync(errorLog);
 				}
+			}
+
+			await ClearTicketIdsBlobAsync();
+
+			response.DebugMessage = "Procesiranje Expo Računa je završeno, errori su logovani u 'NotificationErrorsLog.txt' (ukoliko ih je bilo)";
+			return response;
+		}
+
+		public async Task<ServiceResponse<object?>> DeleteOldPeriods()
+		{
+			var response = new ServiceResponse<object?>();
+
+			var now = DateTime.UtcNow;
+			var dateDeletionThreshold = new DateTime(now.AddYears(-1).Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+			var oldPeriods = await _context.PeriodHistory.Where(p => p.EndDate < dateDeletionThreshold).ToListAsync();
+
+			if (oldPeriods.Any())
+			{
+				_context.PeriodHistory.RemoveRange(oldPeriods);
+
+				await _context.SaveChangesAsync();
+
+				response.DebugMessage = $"Uspješno obrisano {oldPeriods.Count} starih zapisa o periodima.";
+			}
+			else
+			{
+				response.DebugMessage = "Nema starih zapisa o periodima za brisanje.";
 			}
 
 			return response;
 		}
 
+		private static void CheckNotificationPushResultErrors(PushTicketResponse result, ServiceResponse<List<string>?> response)
+		{
+			if (result?.PushTicketErrors?.Count > 0)
+			{
+				int counter = 1;
+				foreach (var error in result.PushTicketErrors)
+				{
+					response.DebugMessage += $"Error number {counter}: {error.ErrorCode} - {error.ErrorMessage}. | ";
+					response.StatusCode = 500;
+				}
+			}
+		}
 
 		private static List<string> GetUsersWithPeriodIn1Day(List<UserLastPeriodDto> usersWithDbEntries)
 		{
@@ -259,5 +280,71 @@
 			return usersWithLastPeriod;
 		}
 
+		private async Task SaveTicketIdsToBlobAsync(List<string> ticketIds)
+		{
+			var containerName = "notification-data";
+			var blobName = "ExpoTicketIds.txt";
+			var blobContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+
+			await blobContainerClient.CreateIfNotExistsAsync();
+
+			var blobClient = blobContainerClient.GetBlobClient(blobName);
+			var logEntry = string.Join(Environment.NewLine, ticketIds) + Environment.NewLine;
+
+			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(logEntry)))
+			{
+				await blobClient.UploadAsync(stream, overwrite: true);
+			}
+		}
+
+		private async Task<List<string>> ReadTicketIdsFromBlobAsync()
+		{
+			var containerName = "notification-data";
+			var blobName = "ExpoTicketIds.txt";
+			var blobContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+			var blobClient = blobContainerClient.GetBlobClient(blobName);
+
+			if (await blobClient.ExistsAsync())
+			{
+				var downloadResponse = await blobClient.DownloadAsync();
+				using (var reader = new StreamReader(downloadResponse.Value.Content))
+				{
+					var fileContent = await reader.ReadToEndAsync();
+					return fileContent.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).ToList();
+				}
+			}
+
+			return new List<string>();
+		}
+
+		private async Task AppendErrorLogToBlobAsync(string errorLog)
+		{
+			var containerName = "notification-data";
+			var errorLogBlobName = "NotificationErrorsLog.txt";
+			var blobContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+
+			var appendBlobClient = blobContainerClient.GetAppendBlobClient(errorLogBlobName);
+
+			if (!await appendBlobClient.ExistsAsync())
+			{
+				await appendBlobClient.CreateAsync();
+			}
+
+			var logEntry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} - {errorLog}{Environment.NewLine}";
+			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(logEntry)))
+			{
+				await appendBlobClient.AppendBlockAsync(stream);
+			}
+		}
+
+		private async Task ClearTicketIdsBlobAsync()
+		{
+			var containerName = "notification-data";
+			var blobName = "ExpoTicketIds.txt";
+			var blobContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+			var blobClient = blobContainerClient.GetBlobClient(blobName);
+
+			await blobClient.DeleteIfExistsAsync();
+		}
 	}
 }

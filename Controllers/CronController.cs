@@ -29,6 +29,16 @@
 		}
 
 		[ApiKey]
+		[HttpGet("GetAndProcessReceipts")]
+		[SwaggerOperation(Description = "This endpoint is intended exclusively for use by cron jobs. An API key is required to access this endpoint.")]
+		public async Task<ActionResult<ServiceResponse<object?>>> GetAndProcessReceipts()
+		{
+			var response = await _cronService.GetAndProcessReceipts();
+
+			return Ok(response);
+		}
+
+		[ApiKey]
 		[HttpDelete("DeleteOldPeriods")]
 		[SwaggerOperation(Description = "This endpoint is intended exclusively for use by cron jobs. An API key is required to access this endpoint.")]
 		public async Task<ActionResult<ServiceResponse<object?>>> DeleteOldPeriods()

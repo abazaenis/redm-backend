@@ -1,5 +1,7 @@
 namespace Redm_backend
 {
+	using Azure.Storage.Blobs;
+
 	using Microsoft.AspNetCore.Authentication.JwtBearer;
 	using Microsoft.EntityFrameworkCore;
 	using Microsoft.IdentityModel.Tokens;
@@ -28,6 +30,8 @@ namespace Redm_backend
 			// Database Connection
 			var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 			builder.Services.AddDbContext<DataContext>(options => options.UseNpgsql(connectionString));
+
+			builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration.GetConnectionString("AzureStorage")));
 
 			// Add services to the container.
 			builder.Services.AddControllers()
