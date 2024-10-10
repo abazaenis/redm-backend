@@ -6,6 +6,7 @@
 	using Microsoft.EntityFrameworkCore;
 
 	using Redm_backend.Data;
+	using Redm_backend.Dtos.Cron;
 	using Redm_backend.Models;
 
 	public class CronService : ICronService
@@ -48,44 +49,162 @@
 		{
 			var response = new ServiceResponse<List<string>?>();
 
-			var pushTokensPeriodIn5Days = await PeriodNotification5Days();
+			var usersWithDbEntries = await GetUsersWithDbEntries();
 
-			if (pushTokensPeriodIn5Days == null || !pushTokensPeriodIn5Days.Any())
+			var pushTokensPeriodIn1Day = GetUsersWithPeriodIn1Day(usersWithDbEntries);
+			var pushTokensPeriodIn5Days = GetUsersWithPeriodIn5Days(usersWithDbEntries);
+			var pushTokensOvulationToday = GetUsersWithOvulationToday(usersWithDbEntries);
+			var pushTokensFertileDaysStartToday = GetUsersWithFertileDaysStartToday(usersWithDbEntries);
+
+			if ((pushTokensPeriodIn5Days == null || !pushTokensPeriodIn5Days.Any()) &&
+				(pushTokensPeriodIn1Day == null || !pushTokensPeriodIn1Day.Any()) &&
+				(pushTokensOvulationToday == null || !pushTokensOvulationToday.Any()) &&
+				(pushTokensFertileDaysStartToday == null || !pushTokensFertileDaysStartToday.Any()))
 			{
-				response.DebugMessage = "Nema korisnika kojima menstruacija za 5 dana.";
+				response.DebugMessage = "Nema korisnika kojima menstruacija za 5 dana ili dan, ni kojima je ovulacija ili početak plodnih dana danas.";
+				return response;
 			}
 
-			//response.Data = pushTokensPeriodIn5Days;
-			//return response;
-
-			var pushTicketReq = new PushTicketRequest()
+			if (pushTokensPeriodIn1Day != null && pushTokensPeriodIn1Day.Count != 0)
 			{
-				PushTo = pushTokensPeriodIn5Days,
-				PushBadgeCount = 7,
-				PushBody = Convert.ToString(DateTime.UtcNow),
-			};
-
-			var result = await _expoSDKClient.PushSendAsync(pushTicketReq);
-			var responseData = new List<string>();
-
-			if (result?.PushTicketErrors?.Any() == true)
-			{
-				foreach (var error in result.PushTicketErrors)
+				var pushTicketReqPeriodIn1Day = new PushTicketRequest()
 				{
-					responseData.Add($"Error: {error.ErrorCode} - {error.ErrorMessage}");
-				}
+					PushTo = pushTokensPeriodIn1Day,
+					PushBadgeCount = 7,
+					PushBody = "CickoMicko: Menstruacija Vam počinje sutra.",
+				};
 
-				response.Data = responseData;
+				await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn1Day);
+			}
+
+			if (pushTokensPeriodIn5Days != null && pushTokensPeriodIn5Days.Count != 0)
+			{
+				var pushTicketReqPeriodIn5Days = new PushTicketRequest()
+				{
+					PushTo = pushTokensPeriodIn5Days,
+					PushBadgeCount = 7,
+					PushBody = "CickoMicko: Menstruacija Vam počinje za 5 dana.",
+				};
+
+				await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn5Days);
+			}
+
+			if (pushTokensOvulationToday != null && pushTokensOvulationToday.Count != 0)
+			{
+				var pushTicketReqOvulationToday = new PushTicketRequest()
+				{
+					PushTo = pushTokensOvulationToday,
+					PushBadgeCount = 7,
+					PushBody = "CickoMicko: Danas Vam je ovulacija.",
+				};
+
+				await _expoSDKClient.PushSendAsync(pushTicketReqOvulationToday);
+			}
+
+			if (pushTokensFertileDaysStartToday != null && pushTokensFertileDaysStartToday.Count != 0)
+			{
+				var pushTicketReqFertileDaysStartToday = new PushTicketRequest()
+				{
+					PushTo = pushTokensFertileDaysStartToday,
+					PushBadgeCount = 7,
+					PushBody = "CickoMicko: Danas Vam počinju plodni dani.",
+				};
+
+				await _expoSDKClient.PushSendAsync(pushTicketReqFertileDaysStartToday);
 			}
 
 			return response;
 		}
 
-		private async Task<List<string>> PeriodNotification5Days()
+		private static List<string> GetUsersWithPeriodIn1Day(List<UserLastPeriodDto> usersWithDbEntries)
+		{
+			var targetDateIn1Day = DateTime.UtcNow.Date.AddDays(1);
+			var userExpoTokensWithPeriodIn1Day = usersWithDbEntries
+				.Where(x =>
+				{
+					var predictedPeriodStart = x.LastPeriod!.StartDate;
+					while (predictedPeriodStart < targetDateIn1Day)
+					{
+						predictedPeriodStart = predictedPeriodStart.AddDays(x.User.CycleDuration);
+					}
+
+					return predictedPeriodStart == targetDateIn1Day;
+				})
+				.Select(x => x.User.ExpoPushToken)
+				.ToList();
+
+			return userExpoTokensWithPeriodIn1Day;
+		}
+
+		private static List<string> GetUsersWithPeriodIn5Days(List<UserLastPeriodDto> usersWithDbEntries)
+		{
+			var targetDateIn5Days = DateTime.UtcNow.Date.AddDays(5);
+			var userExpoTokensWithPeriodIn5Days = usersWithDbEntries
+				.Where(x =>
+				{
+					var predictedPeriodStart = x.LastPeriod!.StartDate;
+					while (predictedPeriodStart < targetDateIn5Days)
+					{
+						predictedPeriodStart = predictedPeriodStart.AddDays(x.User.CycleDuration);
+					}
+
+					return predictedPeriodStart == targetDateIn5Days;
+				})
+				.Select(x => x.User.ExpoPushToken)
+				.ToList();
+
+			return userExpoTokensWithPeriodIn5Days;
+		}
+
+		private static List<string> GetUsersWithOvulationToday(List<UserLastPeriodDto> usersWithDbEntries)
+		{
+			var today = DateTime.UtcNow.Date;
+			var userExpoTokensWithOvulationToday = usersWithDbEntries
+				.Where(x =>
+				{
+					var predictedPeriodStart = x.LastPeriod!.StartDate;
+					var predictedOvulationStart = predictedPeriodStart.AddDays(-14);
+					while (predictedOvulationStart < today)
+					{
+						predictedPeriodStart = predictedPeriodStart.AddDays(x.User.CycleDuration);
+						predictedOvulationStart = predictedPeriodStart.AddDays(-14);
+					}
+
+					return predictedOvulationStart == today;
+				})
+				.Select(x => x.User.ExpoPushToken)
+				.ToList();
+
+			return userExpoTokensWithOvulationToday;
+		}
+
+		private static List<string> GetUsersWithFertileDaysStartToday(List<UserLastPeriodDto> usersWithDbEntries)
+		{
+			var today = DateTime.UtcNow.Date;
+			var userExpoTokensWithFertileDayStartingToday = usersWithDbEntries
+				.Where(x =>
+				{
+					var predictedPeriodStart = x.LastPeriod!.StartDate;
+					var predictedFertileDaysStart = predictedPeriodStart.AddDays(-14).AddDays(-5);
+					while (predictedFertileDaysStart < today)
+					{
+						predictedPeriodStart = predictedPeriodStart.AddDays(x.User.CycleDuration);
+						predictedFertileDaysStart = predictedPeriodStart.AddDays(-14).AddDays(-5);
+					}
+
+					return predictedFertileDaysStart == today;
+				})
+				.Select(x => x.User.ExpoPushToken)
+				.ToList();
+
+			return userExpoTokensWithFertileDayStartingToday;
+		}
+
+		private async Task<List<UserLastPeriodDto>> GetUsersWithDbEntries()
 		{
 			var usersWithLastPeriod = await _context.Users
 				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken))
-				.Select(u => new
+				.Select(u => new UserLastPeriodDto
 				{
 					User = u,
 					LastPeriod = _context.PeriodHistory
@@ -96,22 +215,8 @@
 				.Where(x => x.LastPeriod != null)
 				.ToListAsync();
 
-			var targetDate = DateTime.UtcNow.Date.AddDays(5);
-			var userExpoTokensWithPeriodIn5Days = usersWithLastPeriod
-				.Where(x =>
-				{
-					var predictedPeriodStart = x.LastPeriod!.StartDate;
-					while (predictedPeriodStart < targetDate)
-					{
-						predictedPeriodStart = predictedPeriodStart.AddDays(x.User.CycleDuration);
-					}
-
-					return predictedPeriodStart == targetDate;
-				})
-				.Select(x => x.User.ExpoPushToken)
-				.ToList();
-
-			return userExpoTokensWithPeriodIn5Days;
+			return usersWithLastPeriod;
 		}
+
 	}
 }
