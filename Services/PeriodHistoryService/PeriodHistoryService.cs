@@ -171,7 +171,11 @@
 
 			HandleOvulationAndFertileDays(periodsDictionary, periods, averageCycleLength);
 
-			response.Data = periodsDictionary;
+			var sortedPeriodsDictionary = periodsDictionary
+				.OrderBy(p => DateTime.Parse(p.Key))
+				.ToDictionary(p => p.Key, p => p.Value);
+
+			response.Data = sortedPeriodsDictionary;
 			return response;
 		}
 
