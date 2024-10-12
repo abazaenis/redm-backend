@@ -100,14 +100,6 @@ namespace Redm_backend
 			app.UseSwagger();
 			app.UseSwaggerUI();
 
-			app.MapGet("/current-time", () =>
-			{
-				return Results.Ok($"Current server time: {Convert.ToString(DateTime.UtcNow)}");
-			});
-
-			app.UseSwagger();
-			app.UseSwaggerUI();
-
 			app.UseCors("AllowAll");
 
 			app.UseAuthorization();

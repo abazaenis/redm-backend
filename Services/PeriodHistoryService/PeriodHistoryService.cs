@@ -414,7 +414,7 @@
 					var previousPeriodStart = DateTime.SpecifyKind(periods[i - 1].startDate, DateTimeKind.Utc);
 					var previousPeriodEnd = DateTime.SpecifyKind(periods[i - 1].endDate, DateTimeKind.Utc);
 
-					if ((currentPeriodStart - previousPeriodEnd).TotalDays >= 19)
+					if ((currentPeriodStart - previousPeriodEnd).TotalDays > 19)
 					{
 						var ovulationDate = currentPeriodStart.AddDays(-14);
 						var fertileStartDate = ovulationDate.AddDays(-5);
@@ -425,13 +425,11 @@
 
 				if (i == periods.Count - 1)
 				{
-
 					var nextPeriodStart = currentPeriodStart.AddDays(averageCycleLength);
 					var nextOvulationDate = nextPeriodStart.AddDays(-14);
 					var nextFertileStartDate = nextOvulationDate.AddDays(-5);
 					var nextFertileEndDate = nextOvulationDate.AddDays(1);
 					AddOvulationAndFertileDays(ref periodsDictionary, nextFertileStartDate, nextFertileEndDate);
-
 				}
 			}
 		}

@@ -10,7 +10,6 @@
         {
         }
 
-        // This is what EF uses for mapping and querying models
         public DbSet<User> Users => Set<User>();
 
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
