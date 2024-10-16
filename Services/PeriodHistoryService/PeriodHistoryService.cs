@@ -49,8 +49,8 @@
 
 			var periodsInRange = await _context.PeriodHistory
 				.Where(ph => ph.UserId == userId &&
-                ((ph.StartDate >= smallestDateStart && ph.StartDate <= largestDateEnd) ||
-                (ph.EndDate >= smallestDateStart && ph.EndDate <= largestDateEnd)))
+                ((ph.StartDate >= smallestDateStart.AddDays(-1) && ph.StartDate <= largestDateEnd.AddDays(1)) ||
+                (ph.EndDate >= smallestDateStart.AddDays(-1) && ph.EndDate <= largestDateEnd.AddDays(1))))
 				.OrderBy(ph => ph.StartDate)
 				.ToListAsync();
 
