@@ -1,11 +1,14 @@
 ﻿namespace Redm_backend.Data
 {
     using System.IdentityModel.Tokens.Jwt;
+    using System.Net.Http.Headers;
     using System.Security.Claims;
+    using System.Text.Json;
     using System.Text.RegularExpressions;
     using Google.Apis.Auth;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.IdentityModel.Tokens;
+    using Newtonsoft.Json.Linq;
     using Redm_backend.Dtos.Auth;
     using Redm_backend.Models;
     using static Google.Apis.Auth.GoogleJsonWebSignature;
@@ -175,32 +178,31 @@
             var response = new ServiceResponse<TokensResponseDto>();
             try
             {
-                // Validate the token using Google's library
-                var payload = await ValidateAsync(model.IdToken, new ValidationSettings
-                {
-                    Audience = new[] { _configuration.GetSection("Google:ClientId").Value! },
-                });
-
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
 
                 if (user is null)
                 {
                     var userToBeCreated = new User
                     {
-                        FirstName = payload.GivenName,
-                        LastName = payload.FamilyName,
-                        Email = payload.Email,
+                        FirstName = model.GivenName,
+                        LastName = model.FamilyName,
+                        Email = model.Email,
                         PasswordHash = null,
                         PasswordSalt = null,
-                        GoogleId = payload.Subject,
+                        GoogleId = model.Id,
                     };
 
                     _context.Users.Add(userToBeCreated);
                     await _context.SaveChangesAsync();
 
                     // Retrieve the newly created user
-                    user = await _context.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+                    user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
                     response.StatusCode = 201;
+                }
+                else
+                {
+                    user.GoogleId = model.Id;
+                    await _context.SaveChangesAsync();
                 }
 
                 // Generate new refresh and access tokens
