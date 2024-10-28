@@ -4,6 +4,8 @@
 
 	public interface ICronService
 	{
+		Task<ServiceResponse<List<string>?>> AndroidProbationPeriodNotifications();
+
 		Task<ServiceResponse<List<string>?>> SendDailyNotifications();
 
 		Task<ServiceResponse<object?>> GetAndProcessReceipts();

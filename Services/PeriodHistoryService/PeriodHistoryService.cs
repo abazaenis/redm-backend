@@ -609,7 +609,7 @@
 				//	response.DebugMessage += $"Closest next period: {nextPeriod.StartDate} to {nextPeriod.EndDate}\n";
 				//}
 
-				AddPeriodDay(periodsInRange, previousPeriod, nextPeriod, date);
+				AddPeriodDay(periodsInRange, previousPeriod!, nextPeriod, date);
 
 				return;
 			}
@@ -651,7 +651,7 @@
 
 					//response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
 
-					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
+					AddPeriodDay(periodsInRange, firstPeriod!, secondPeriod, date);
 					return;
 				}
 

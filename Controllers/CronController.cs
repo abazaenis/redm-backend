@@ -19,6 +19,16 @@
 		}
 
 		[ApiKey]
+		[HttpPost("AndroidProbationPeriodNotifications")]
+		[SwaggerOperation(Description = "This endpoint is temporary.")]
+		public async Task<ActionResult<ServiceResponse<List<string>?>>> AndroidProbationPeriodNotifications()
+		{
+			var response = await _cronService.AndroidProbationPeriodNotifications();
+
+			return Ok(response);
+		}
+
+		[ApiKey]
 		[HttpPost("SendDailyNotifications")]
 		[SwaggerOperation(Description = "This endpoint is intended exclusively for use by cron jobs. An API key is required to access this endpoint.")]
 		public async Task<ActionResult<ServiceResponse<List<string>?>>> SendDailyNotifications()

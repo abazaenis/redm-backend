@@ -11,10 +11,10 @@
 		public override Status Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
 			// Read the string value from the JSON and convert it to the enum
-			string stringValue = reader.GetString();
+			string stringValue = reader.GetString()!;
 
 			// Convert the string to the corresponding enum value
-			return stringValue.ToLower() switch
+			return stringValue!.ToLower() switch
 			{
 				"normal" => Status.Normal,
 				"warning" => Status.Warning,

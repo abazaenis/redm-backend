@@ -1,13 +1,14 @@
 ﻿namespace Redm_backend.Services.UserService
 {
 	using System.Security.Claims;
+	using System.Text.RegularExpressions;
 
 	using Microsoft.EntityFrameworkCore;
-	using Microsoft.IdentityModel.Tokens;
 
 	using Redm_backend.Data;
 	using Redm_backend.Dtos.User;
 	using Redm_backend.Models;
+
 	public class UserService : IUserService
 	{
 		private readonly DataContext _context;
@@ -221,10 +222,11 @@
 		public async Task<ServiceResponse<object?>> UpdateExpoPushToken(ExpoPushTokenDto expoPushToken)
 		{
 			var response = new ServiceResponse<object?>();
+			string pattern = @"^ExponentPushToken\[(.*?)\]$";
 
-			if (string.IsNullOrWhiteSpace(expoPushToken.ExpoPushToken))
+			if (string.IsNullOrWhiteSpace(expoPushToken.ExpoPushToken) || !Regex.IsMatch(expoPushToken.ExpoPushToken, pattern))
 			{
-				response.DebugMessage = "ExpoPushToken mora imati vrijednost.";
+				response.DebugMessage = "ExpoPushToken mora biti u formatu 'ExponentPushToken[...]'.";
 				response.StatusCode = 400;
 
 				return response;

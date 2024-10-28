@@ -9,7 +9,7 @@
 		public override ActionType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 		{
 			// Read the string value from the JSON and convert it to the enum
-			string stringValue = reader.GetString();
+			string stringValue = reader.GetString()!;
 
 			// Convert "Add" or "Delete" to the corresponding enum value
 			return stringValue.ToLower() switch

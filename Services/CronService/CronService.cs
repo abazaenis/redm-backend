@@ -27,12 +27,41 @@
 			_expoSDKClient = new PushApiClient();
 		}
 
+		public async Task<ServiceResponse<List<string>?>> AndroidProbationPeriodNotifications()
+		{
+			var response = new ServiceResponse<List<string>?>();
+
+			var expoPushTokens = await _context.Users
+				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken))
+				.Select(user => user.ExpoPushToken)
+				.ToListAsync();
+
+			if (!expoPushTokens.Any())
+			{
+				response.DebugMessage = "Nema korisnika kojima je dodijeljen Expo Token.";
+				return response;
+			}
+
+			var pushTicketRequest = new PushTicketRequest()
+			{
+				PushTo = new List<string> { "ExponentPushToken[JTHE24HTsNpUYwtHSgGbFe]" },
+				PushBadgeCount = 7,
+				PushBody = "Samo mali podsjetnik – otvori REDm i ostani u toku! 💕.",
+			};
+
+			var result = await _expoSDKClient.PushSendAsync(pushTicketRequest);
+
+			CheckNotificationPushResultErrors(result, response);
+
+			return response;
+		}
+
 		public async Task<ServiceResponse<List<string>?>> SendDailyNotifications()
 		{
 			var response = new ServiceResponse<List<string>?>();
 			var ticketIds = new List<string>();
 
-			var usersWithDbEntries = await GetUsersWithDbEntries();
+			var usersWithDbEntries = await GetUsersWithExpoTokenDbEntries();
 
 			var pushTokensPeriodIn1Day = GetUsersWithPeriodIn1Day(usersWithDbEntries);
 			var pushTokensPeriodIn5Days = GetUsersWithPeriodIn5Days(usersWithDbEntries);
@@ -262,7 +291,7 @@
 			return userExpoTokensWithFertileDayStartingToday;
 		}
 
-		private async Task<List<UserLastPeriodDto>> GetUsersWithDbEntries()
+		private async Task<List<UserLastPeriodDto>> GetUsersWithExpoTokenDbEntries()
 		{
 			var usersWithLastPeriod = await _context.Users
 				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken))
