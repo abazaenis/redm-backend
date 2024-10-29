@@ -36,7 +36,7 @@
 				.Select(user => user.ExpoPushToken)
 				.ToListAsync();
 
-			if (!expoPushTokens.Any())
+			if (expoPushTokens.Count == 0)
 			{
 				response.DebugMessage = "Nema korisnika kojima je dodijeljen Expo Token.";
 				return response;
@@ -44,7 +44,7 @@
 
 			var pushTicketRequest = new PushTicketRequest()
 			{
-				PushTo = new List<string> { "ExponentPushToken[JTHE24HTsNpUYwtHSgGbFe]" },
+				PushTo = new List<string> { "ExponentPushToken[JTHE24HTsNpUYwtHSgGbFe]" }, // expoPushTokens
 				PushBadgeCount = 7,
 				PushBody = "Samo mali podsjetnik – otvori REDm i ostani u toku! 💕.",
 			};
