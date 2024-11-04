@@ -28,6 +28,8 @@
 
         public string? ExpoPushToken { get; set; }
 
+        public DateTime? LastActive { get; set; }
+
         public ICollection<PeriodHistory>? PeriodHistories { get; set; }
     }
 }
