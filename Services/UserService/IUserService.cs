@@ -19,6 +19,8 @@
 
 		Task<ServiceResponse<object?>> DeleteExpoPushToken();
 
+		Task<ServiceResponse<object?>> UpdateLastActive();
+
 		int GetUserId();
 
 		Task<bool> UserExists(string email);
