@@ -1,332 +1,344 @@
 ﻿namespace Redm_backend.Data
 {
-    using System.IdentityModel.Tokens.Jwt;
-    using System.Net.Http.Headers;
-    using System.Security.Claims;
-    using System.Text.Json;
-    using System.Text.RegularExpressions;
-    using Google.Apis.Auth;
-    using Microsoft.EntityFrameworkCore;
-    using Microsoft.IdentityModel.Tokens;
-    using Newtonsoft.Json.Linq;
-    using Redm_backend.Dtos.Auth;
-    using Redm_backend.Models;
-    using static Google.Apis.Auth.GoogleJsonWebSignature;
+	using System.IdentityModel.Tokens.Jwt;
+	using System.Net.Http.Headers;
+	using System.Security.Claims;
+	using System.Text.Json;
+	using System.Text.RegularExpressions;
 
-    public class AuthRepository : IAuthRepository
-    {
-        private readonly DataContext _context;
-        private readonly IConfiguration _configuration;
+	using Google.Apis.Auth;
 
-        public AuthRepository(DataContext context, IConfiguration configuration)
-        {
-            _context = context;
-            _configuration = configuration;
-        }
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.IdentityModel.Tokens;
 
-        public async Task<ServiceResponse<TokensResponseDto>> Login(string email, string password)
-        {
-            var response = new ServiceResponse<TokensResponseDto>();
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email!.Equals(email));
+	using Newtonsoft.Json.Linq;
 
-            if (user is not null && user.PasswordHash is null)
-            {
-                response.StatusCode = 409;
-                response.Message = "Registrovani ste preko Googela (moožda kasnije i Apple IDa). Molimo Vas prijavite se preko Googlea";
-                return response;
-            }
+	using Redm_backend.Dtos.Auth;
+	using Redm_backend.Models;
 
-            // Check users username and password
-            if (user is null)
-            {
-                response.StatusCode = 404;
-                response.Message = $"Korisnik '{email}' nije pronađen.";
-            }
-            else if (!VerifyPasswordHash(password, user.PasswordHash!, user.PasswordSalt!))
-            {
-                response.StatusCode = 400;
-                response.Message = "Pogrešna lozinka.";
-            }
-            else
-            {
-                // Create new access and refresh tokens
-                var accessToken = CreateToken(user, user.PasswordHash != null);
-                var refreshToken = Guid.NewGuid().ToString();
+	using static Google.Apis.Auth.GoogleJsonWebSignature;
 
-                // Update users token based on if user already has refresh token or not
-                var existingToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.UserId == user.Id);
-                if (existingToken is null)
-                {
-                    var newRefreshToken = new RefreshToken
-                    {
-                        Token = refreshToken,
-                        Expiration = DateTime.UtcNow.AddDays(60),
-                        UserId = user.Id,
-                    };
+	public class AuthRepository : IAuthRepository
+	{
+		private readonly DataContext _context;
+		private readonly IConfiguration _configuration;
 
-                    _context.RefreshTokens.Add(newRefreshToken);
-                }
-                else
-                {
-                    existingToken.Token = refreshToken;
-                    existingToken.Expiration = DateTime.UtcNow.AddDays(60);
-                }
+		public AuthRepository(DataContext context, IConfiguration configuration)
+		{
+			_context = context;
+			_configuration = configuration;
+		}
 
-                response.Data = new TokensResponseDto()
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                };
+		public async Task<ServiceResponse<TokensResponseDto>> Login(string email, string password)
+		{
+			var response = new ServiceResponse<TokensResponseDto>();
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.Email!.Equals(email));
 
-                response.Message = $"Dobro došli {user.FirstName}.";
-                response.DebugMessage = "Login uspješan, generisani novi access i refresh tokeni.";
-            }
+			if (user is not null && user.PasswordHash is null)
+			{
+				response.StatusCode = 409;
+				response.Message = "Registrovani ste preko Googela (moožda kasnije i Apple IDa). Molimo Vas prijavite se preko Googlea";
+				return response;
+			}
 
-            await _context.SaveChangesAsync();
-            return response;
-        }
+			// Check users username and password
+			if (user is null)
+			{
+				response.StatusCode = 404;
+				response.Message = $"Korisnik '{email}' nije pronađen.";
+			}
+			else if (!VerifyPasswordHash(password, user.PasswordHash!, user.PasswordSalt!))
+			{
+				response.StatusCode = 400;
+				response.Message = "Pogrešna lozinka.";
+			}
+			else
+			{
+				// Create new access and refresh tokens
+				var accessToken = CreateToken(user, user.PasswordHash != null);
+				var refreshToken = Guid.NewGuid().ToString();
 
-        public async Task<ServiceResponse<TokensResponseDto>> Register(User user, string password)
-        {
-            var response = new ServiceResponse<TokensResponseDto>();
+				// Update users token based on if user already has refresh token or not
+				var existingToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.UserId == user.Id);
+				if (existingToken is null)
+				{
+					var newRefreshToken = new RefreshToken
+					{
+						Token = refreshToken,
+						Expiration = DateTime.UtcNow.AddDays(60),
+						UserId = user.Id,
+					};
 
-            CheckRegisterRequestValues(user, out bool validRequest, out string message);
+					_context.RefreshTokens.Add(newRefreshToken);
+				}
+				else
+				{
+					existingToken.Token = refreshToken;
+					existingToken.Expiration = DateTime.UtcNow.AddDays(60);
+				}
 
-            if (!validRequest)
-            {
-                response.Message = message;
-                response.StatusCode = 400;
-                return response;
-            }
+				response.Data = new TokensResponseDto()
+				{
+					AccessToken = accessToken,
+					RefreshToken = refreshToken,
+				};
 
-            var userExists = await _context.Users.AnyAsync(u => u.Email == user.Email);
+				response.Message = $"Dobro došli {user.FirstName}.";
+				response.DebugMessage = "Login uspješan, generisani novi access i refresh tokeni.";
+			}
 
-            // Check if user already exists
-            if (userExists)
-            {
-                response.StatusCode = 400;
-                response.Message = $"Korisnik {user.Email} već postoji.";
-                return response;
-            }
+			await _context.SaveChangesAsync();
+			return response;
+		}
 
-            if (password.Length < 6)
-            {
-                response.Message = "Lozinka mora imati barem 6 karaktera.";
-                response.StatusCode = 400;
-                return response;
-            }
+		public async Task<ServiceResponse<TokensResponseDto>> Register(User user, string password)
+		{
+			var response = new ServiceResponse<TokensResponseDto>();
 
-            // Register user
-            CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
+			CheckRegisterRequestValues(user, out bool validRequest, out string message);
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+			if (!validRequest)
+			{
+				response.Message = message;
+				response.StatusCode = 400;
+				return response;
+			}
 
-            var loginResponse = await Login(user.Email!, password);
+			var userExists = await _context.Users.AnyAsync(u => u.Email == user.Email);
 
-            if (loginResponse.StatusCode != 200)
-            {
-                response.DebugMessage = "Korisnik uspješno registrovan međutim login je neuspješan";
-                response.StatusCode = 400;
-                return response;
-            }
+			// Check if user already exists
+			if (userExists)
+			{
+				response.StatusCode = 400;
+				response.Message = $"Korisnik {user.Email} već postoji.";
+				return response;
+			}
 
-            response.StatusCode = 201;
-            response.Data = loginResponse.Data;
-            response.Message = "Profil uspješno registrovan, molimo Vas prijavite se.";
+			if (password.Length < 6)
+			{
+				response.Message = "Lozinka mora imati barem 6 karaktera.";
+				response.StatusCode = 400;
+				return response;
+			}
 
-            return response;
-        }
+			// Register user
+			CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
+			user.PasswordHash = passwordHash;
+			user.PasswordSalt = passwordSalt;
 
-        public async Task<ServiceResponse<TokensResponseDto>> Refresh(string refreshToken)
-        {
-            var response = new ServiceResponse<TokensResponseDto>();
-            var validRefreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Token == refreshToken);
+			_context.Users.Add(user);
+			await _context.SaveChangesAsync();
 
-            // Check if given refresh token is valid
-            if (validRefreshToken is not null)
-            {
-                // Generate new access and refresh tokens
-                var user = await _context.Users.SingleOrDefaultAsync(user => user.Id == validRefreshToken.UserId);
-                var accessToken = CreateToken(user!, user!.PasswordHash != null);
-                var newRefreshToken = Guid.NewGuid().ToString();
+			var loginResponse = await Login(user.Email!, password);
 
-                validRefreshToken.Token = newRefreshToken;
-                validRefreshToken.Expiration = DateTime.UtcNow.AddDays(60);
-                await _context.SaveChangesAsync();
+			if (loginResponse.StatusCode != 200)
+			{
+				response.DebugMessage = "Korisnik uspješno registrovan međutim login je neuspješan";
+				response.StatusCode = 400;
+				return response;
+			}
 
-                response.Data = new TokensResponseDto
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = newRefreshToken,
-                };
-                response.DebugMessage = "Zahtjev uspješan, generisani su novi access i refresh tokeni.";
-            }
-            else
-            {
-                response.StatusCode = 401;
-                response.DebugMessage = "Refresh token koji ste poslali nije validan.";
-            }
+			response.StatusCode = 201;
+			response.Data = loginResponse.Data;
+			response.Message = "Profil uspješno registrovan, molimo Vas prijavite se.";
 
-            return response;
-        }
+			return response;
+		}
 
-        public async Task<ServiceResponse<TokensResponseDto>> GoogleSignIn(GoogleSignInVMDto model)
-        {
-            var response = new ServiceResponse<TokensResponseDto>();
-            try
-            {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+		public async Task<ServiceResponse<TokensResponseDto>> Refresh(string refreshToken)
+		{
+			var response = new ServiceResponse<TokensResponseDto>();
+			var validRefreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Token == refreshToken);
 
-                if (user is null)
-                {
-                    var userToBeCreated = new User
-                    {
-                        FirstName = model.GivenName,
-                        LastName = model.FamilyName,
-                        Email = model.Email,
-                        PasswordHash = null,
-                        PasswordSalt = null,
-                        GoogleId = model.Id,
-                    };
+			// Check if given refresh token is valid
+			if (validRefreshToken is not null)
+			{
+				if (validRefreshToken.Expiration < DateTime.UtcNow)
+				{
+					response.StatusCode = 401;
+					response.Message = "Sesija istekla, molimo Vas prijavite se ponovo.";
+					return response;
+				}
 
-                    _context.Users.Add(userToBeCreated);
-                    await _context.SaveChangesAsync();
+				// Generate new access and refresh tokens
+				var user = await _context.Users.SingleOrDefaultAsync(user => user.Id == validRefreshToken.UserId);
+				var accessToken = CreateToken(user!, user!.PasswordHash != null);
+				var newRefreshToken = Guid.NewGuid().ToString();
 
-                    // Retrieve the newly created user
-                    user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
-                    response.StatusCode = 201;
-                }
-                else
-                {
-                    user.GoogleId = model.Id;
-                    await _context.SaveChangesAsync();
-                }
+				validRefreshToken.Token = newRefreshToken;
+				validRefreshToken.Expiration = DateTime.UtcNow.AddDays(60);
+				await _context.SaveChangesAsync();
 
-                // Generate new refresh and access tokens
-                var newRefreshTokenGuid = Guid.NewGuid().ToString();
-                var newExpirationDate = DateTime.UtcNow.AddDays(60);
-                var existingRefreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.UserId == user!.Id);
+				response.Data = new TokensResponseDto
+				{
+					AccessToken = accessToken,
+					RefreshToken = newRefreshToken,
+				};
+				response.DebugMessage = "Zahtjev uspješan, generisani su novi access i refresh tokeni.";
+			}
+			else
+			{
+				response.StatusCode = 401;
+				response.DebugMessage = "Refresh token koji ste poslali nije validan.";
+			}
 
-                // If user doesn't have old refresh token, generate new one
-                if (existingRefreshToken is null)
-                {
-                    var newRefreshToken = new RefreshToken
-                    {
-                        Token = newRefreshTokenGuid,
-                        Expiration = newExpirationDate,
-                        UserId = user!.Id,
-                    };
+			return response;
+		}
 
-                    _context.RefreshTokens.Add(newRefreshToken);
-                }
-                else
-                {
-                    existingRefreshToken.Token = newRefreshTokenGuid;
-                    existingRefreshToken.Expiration = newExpirationDate;
-                }
+		public async Task<ServiceResponse<TokensResponseDto>> GoogleSignIn(GoogleSignInVMDto model)
+		{
+			var response = new ServiceResponse<TokensResponseDto>();
+			try
+			{
+				var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
 
-                await _context.SaveChangesAsync();
+				if (user is null)
+				{
+					var userToBeCreated = new User
+					{
+						FirstName = model.GivenName,
+						LastName = model.FamilyName,
+						Email = model.Email,
+						PasswordHash = null,
+						PasswordSalt = null,
+						GoogleId = model.Id,
+					};
 
-                var accessToken = CreateToken(user!, user!.PasswordHash != null);
-                response.Data = new TokensResponseDto
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = newRefreshTokenGuid,
-                };
-                response.Message = $"Dobro došli {user.FirstName}.";
-                response.DebugMessage = "Autentikacija uspješna, generisani novi access i refresh tokeni";
-            }
-            catch (InvalidJwtException ex)
-            {
-                response.StatusCode = 401;
-                response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Google-a, pokušajte kasnije.";
-                response.DebugMessage = ex.Message;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Google-a, pokušajte kasnije.";
-                response.DebugMessage = ex.Message;
-            }
+					_context.Users.Add(userToBeCreated);
+					await _context.SaveChangesAsync();
 
-            return response;
-        }
+					// Retrieve the newly created user
+					user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+					response.StatusCode = 201;
+				}
+				else
+				{
+					user.GoogleId = model.Id;
+					await _context.SaveChangesAsync();
+				}
 
-        // Helper methods
-        public void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using var hmac = new System.Security.Cryptography.HMACSHA512();
-            passwordSalt = hmac.Key;
-            passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-        }
+				// Generate new refresh and access tokens
+				var newRefreshTokenGuid = Guid.NewGuid().ToString();
+				var newExpirationDate = DateTime.UtcNow.AddDays(60);
+				var existingRefreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.UserId == user!.Id);
 
-        public bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
-        {
-            using var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt);
-            var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+				// If user doesn't have old refresh token, generate new one
+				if (existingRefreshToken is null)
+				{
+					var newRefreshToken = new RefreshToken
+					{
+						Token = newRefreshTokenGuid,
+						Expiration = newExpirationDate,
+						UserId = user!.Id,
+					};
 
-            return computedHash.SequenceEqual(passwordHash);
-        }
+					_context.RefreshTokens.Add(newRefreshToken);
+				}
+				else
+				{
+					existingRefreshToken.Token = newRefreshTokenGuid;
+					existingRefreshToken.Expiration = newExpirationDate;
+				}
 
-        public string CreateToken(User user, bool hasProfile = true)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim("UserId", user.Id.ToString()),
-                new Claim("Email", user.Email ?? string.Empty),
-                new Claim("FirstName", user.FirstName ?? string.Empty),
-                new Claim("LastName", user.LastName ?? string.Empty),
-                new Claim("PeriodDuration", user.PeriodDuration.ToString() ?? string.Empty),
-                new Claim("CycleDuration", user.CycleDuration.ToString() ?? string.Empty),
-                new Claim("AvatarName", user.AvatarName ?? string.Empty),
-                new Claim("HasProfile", hasProfile.ToString()),
-                new Claim(ClaimTypes.Role, user.Role),
-            };
+				await _context.SaveChangesAsync();
 
-            var appSettingsToken = _configuration.GetSection("AppSettings:Token").Value;
+				var accessToken = CreateToken(user!, user!.PasswordHash != null);
+				response.Data = new TokensResponseDto
+				{
+					AccessToken = accessToken,
+					RefreshToken = newRefreshTokenGuid,
+				};
+				response.Message = $"Dobro došli {user.FirstName}.";
+				response.DebugMessage = "Autentikacija uspješna, generisani novi access i refresh tokeni";
+			}
+			catch (InvalidJwtException ex)
+			{
+				response.StatusCode = 401;
+				response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Google-a, pokušajte kasnije.";
+				response.DebugMessage = ex.Message;
+			}
+			catch (Exception ex)
+			{
+				response.StatusCode = 500;
+				response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Google-a, pokušajte kasnije.";
+				response.DebugMessage = ex.Message;
+			}
 
-            SymmetricSecurityKey key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(appSettingsToken!));
+			return response;
+		}
 
-            SigningCredentials creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+		// Helper methods
+		public void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+		{
+			using var hmac = new System.Security.Cryptography.HMACSHA512();
+			passwordSalt = hmac.Key;
+			passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+		}
 
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddSeconds(5),
-                SigningCredentials = creds,
-            };
+		public bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+		{
+			using var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt);
+			var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
 
-            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+			return computedHash.SequenceEqual(passwordHash);
+		}
 
-            return tokenHandler.WriteToken(token);
-        }
+		public string CreateToken(User user, bool hasProfile = true)
+		{
+			var claims = new List<Claim>
+			{
+				new Claim("UserId", user.Id.ToString()),
+				new Claim("Email", user.Email ?? string.Empty),
+				new Claim("FirstName", user.FirstName ?? string.Empty),
+				new Claim("LastName", user.LastName ?? string.Empty),
+				new Claim("PeriodDuration", user.PeriodDuration.ToString() ?? string.Empty),
+				new Claim("CycleDuration", user.CycleDuration.ToString() ?? string.Empty),
+				new Claim("AvatarName", user.AvatarName ?? string.Empty),
+				new Claim("HasProfile", hasProfile.ToString()),
+				new Claim(ClaimTypes.Role, user.Role),
+			};
 
-        public void CheckRegisterRequestValues(User user, out bool validRequest, out string message)
-        {
-            if (user.FirstName is null || user.FirstName.Length == 0 || user.FirstName == string.Empty)
-            {
-                validRequest = false;
-                message = "Ime je obavezno";
-            }
-            else if (user.LastName is null || user.LastName.Length == 0 || user.LastName == string.Empty)
-            {
-                validRequest = false;
-                message = "Prezime je obavezno";
-            }
-            else if (user.Email is null || user.Email.Length == 0 || user.Email == string.Empty || !Regex.IsMatch(user.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
-            {
-                validRequest = false;
-                message = "Email nije u validnom formatu";
-            }
-            else
-            {
-                validRequest = true;
-                message = string.Empty;
-            }
-        }
-    }
+			var appSettingsToken = _configuration.GetSection("AppSettings:Token").Value;
+
+			SymmetricSecurityKey key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(appSettingsToken!));
+
+			SigningCredentials creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+			var tokenDescriptor = new SecurityTokenDescriptor
+			{
+				Subject = new ClaimsIdentity(claims),
+				Expires = DateTime.UtcNow.AddSeconds(5),
+				SigningCredentials = creds,
+			};
+
+			JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+			SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+
+			return tokenHandler.WriteToken(token);
+		}
+
+		public void CheckRegisterRequestValues(User user, out bool validRequest, out string message)
+		{
+			if (user.FirstName is null || user.FirstName.Length == 0 || user.FirstName == string.Empty)
+			{
+				validRequest = false;
+				message = "Ime je obavezno";
+			}
+			else if (user.LastName is null || user.LastName.Length == 0 || user.LastName == string.Empty)
+			{
+				validRequest = false;
+				message = "Prezime je obavezno";
+			}
+			else if (user.Email is null || user.Email.Length == 0 || user.Email == string.Empty || !Regex.IsMatch(user.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+			{
+				validRequest = false;
+				message = "Email nije u validnom formatu";
+			}
+			else
+			{
+				validRequest = true;
+				message = string.Empty;
+			}
+		}
+	}
 }

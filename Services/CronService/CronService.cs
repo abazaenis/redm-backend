@@ -31,8 +31,10 @@
 		{
 			var response = new ServiceResponse<List<string>?>();
 
+			var emails = new List<string> { "enis.abaza@hotmail.com", "ibro@gmail.com", "ibrahim.efendic10@gmail.com" };
+
 			var expoPushTokens = await _context.Users
-				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken))
+				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken) && emails.Contains(u.Email))
 				.Select(user => user.ExpoPushToken)
 				.ToListAsync();
 
@@ -44,9 +46,10 @@
 
 			var pushTicketRequest = new PushTicketRequest()
 			{
-				PushTo = new List<string> { "ExponentPushToken[JTHE24HTsNpUYwtHSgGbFe]" }, // expoPushTokens
+				PushTo = expoPushTokens,
 				PushBadgeCount = 7,
-				PushBody = "Samo mali podsjetnik – otvori REDm i ostani u toku! 💕.",
+				PushTitle = "Samo mali podsjetnik",
+				PushBody = "Otvori REDm i ostani u toku! 💕.",
 			};
 
 			var result = await _expoSDKClient.PushSendAsync(pushTicketRequest);
