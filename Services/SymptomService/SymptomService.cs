@@ -46,7 +46,7 @@
 
             if (symptoms is null)
             {
-                response.StatusCode = 404;
+                response.StatusCode = 204;
                 response.Data = null;
                 response.DebugMessage = $"Ne postoje simptomi za korisnika sa id-em {_userService.GetUserId()} na datum {date.Date.ToString("dd/mm/yyyy")}";
 

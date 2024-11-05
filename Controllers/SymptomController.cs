@@ -28,9 +28,9 @@
         public async Task<ActionResult<ServiceResponse<GetSymptomDto>>> GetSymptomByUserByDate(DateTime date)
         {
             var response = await _symptomService.GetSymptomByUserByDate(date);
-            if (response.StatusCode == 404)
+            if (response.StatusCode == 204)
             {
-                return NotFound(response);
+                return NoContent();
             }
 
             return Ok(response);
