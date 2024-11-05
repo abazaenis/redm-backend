@@ -31,10 +31,8 @@
 		{
 			var response = new ServiceResponse<List<string>?>();
 
-			var emails = new List<string> { "enis.abaza@hotmail.com", "ibro@gmail.com", "ibrahim.efendic10@gmail.com" };
-
 			var expoPushTokens = await _context.Users
-				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken) && emails.Contains(u.Email))
+				.Where(u => !string.IsNullOrEmpty(u.ExpoPushToken))
 				.Select(user => user.ExpoPushToken)
 				.ToListAsync();
 
