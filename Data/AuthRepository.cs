@@ -307,7 +307,7 @@
 			var tokenDescriptor = new SecurityTokenDescriptor
 			{
 				Subject = new ClaimsIdentity(claims),
-				Expires = DateTime.UtcNow.AddSeconds(5),
+				Expires = DateTime.UtcNow.AddHours(4),
 				SigningCredentials = creds,
 			};
 
