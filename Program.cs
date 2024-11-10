@@ -2,6 +2,8 @@ namespace Redm_backend
 {
 	using Microsoft.Extensions.Azure;
 	using Microsoft.Extensions.DependencyInjection;
+
+	using Redm_backend.Extensions.ExceptionExtensions;
 	using Redm_backend.Extensions.ServiceExtensions;
 
 	public static class Program
@@ -21,15 +23,16 @@ namespace Redm_backend
 			builder.Services.ConfigureCors();
 
 			var app = builder.Build();
+			app.MapGet("/", async context => await context.Response.WriteAsync(ServiceExtensions.AddMetricTonSignature()));
 
 			// Configure Middleware Pipeline
+			app.ConfigureExceptionHandler();
 			app.UseSwagger();
 			app.UseSwaggerUI();
 			app.UseCors("AllowAll");
 			app.UseAuthentication();
 			app.UseAuthorization();
 			app.MapControllers();
-			app.Run(async context => await context.Response.WriteAsync(ServiceExtensions.AddMetricTonSignature()));
 
 			app.Run();
 		}
