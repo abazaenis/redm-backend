@@ -16,9 +16,9 @@
 
 		public ValueStatusPairDto<int?>? PreviousCycleLength { get; set; } = new ValueStatusPairDto<int?>();
 
-		public ValueStatusPairDto<double?> AveragePeriodLength { get; set; } = new ValueStatusPairDto<double?>();
+		public ValueStatusPairDto<double?>? AveragePeriodLength { get; set; } = new ValueStatusPairDto<double?>();
 
-		public ValueStatusPairDto<double?> AverageCycleLength { get; set; } = new ValueStatusPairDto<double?>();
+		public ValueStatusPairDto<double?>? AverageCycleLength { get; set; } = new ValueStatusPairDto<double?>();
 
 		public ValueStatusPairDto<string?>? CycleLengthVariation { get; set; } = new ValueStatusPairDto<string?>();
 

@@ -46,8 +46,10 @@
 			{
 				PushTo = expoPushTokens,
 				PushBadgeCount = 7,
-				PushTitle = "Samo mali podsjetnik",
-				PushBody = "Otvori REDm i ostani u toku! 💕.",
+				PushTitle = "Molba",
+				PushBody = "Dragi testni korisnici, molimo vas da ažurirate REDm aplikaciju. Najnoviju verziju možete pronaći na Google Play Store-u pretragom 'com.iefendic.redm'",
+				//PushTitle = "Samo mali podsjetnik",
+				//PushBody = "Otvori REDm i ostani u toku! 💕.",
 			};
 
 			var result = await _expoSDKClient.PushSendAsync(pushTicketRequest);

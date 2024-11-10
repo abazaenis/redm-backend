@@ -29,10 +29,10 @@
 
 			var userId = int.Parse(_httpContextAccessor.HttpContext!.User.FindFirstValue("UserId")!);
 			var userCycleDuration = int.Parse(_httpContextAccessor.HttpContext.User.FindFirstValue("CycleDuration")!);
-			var lastThreeUserPeriods = await _context.PeriodHistory.Where(ph => ph.UserId == userId)
+			var allUserPeriods = await _context.PeriodHistory.Where(ph => ph.UserId == userId)
 													 .OrderByDescending(ph => ph.StartDate)
-													 .Take(3)
 													 .ToListAsync();
+			var lastThreeUserPeriods = allUserPeriods.Take(3).ToList();
 			var lastPeriod = lastThreeUserPeriods.FirstOrDefault();
 			data.PeriodData = (await _periodHistoryService.GetPeriodsAndPredictions()).Data;
 
@@ -55,7 +55,7 @@
 
 			CalculatePercentages(data, lastThreeUserPeriods, userCycleDuration);
 
-			AddPeriodHistory(data, lastThreeUserPeriods);
+			AddPeriodHistory(data, allUserPeriods);
 
 			response.Data = data;
 			return response;
@@ -171,7 +171,7 @@
 			}
 
 			lastThreeUserPeriods = lastThreeUserPeriods.OrderBy(p => p.StartDate).ToList();
-			var lastPeriod = lastThreeUserPeriods.Last();
+			var lastPeriod = lastThreeUserPeriods[^1];
 			int lastPeriodDuration = (lastPeriod.EndDate - lastPeriod.StartDate).Days + 1;
 
 			data.PreviousPeriodLength!.Value = lastPeriodDuration;
