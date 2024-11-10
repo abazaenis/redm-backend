@@ -29,6 +29,7 @@ namespace Redm_backend
 			app.UseAuthentication();
 			app.UseAuthorization();
 			app.MapControllers();
+			app.Run(async context => await context.Response.WriteAsync(ServiceExtensions.AddMetricTonSignature()));
 
 			app.Run();
 		}
