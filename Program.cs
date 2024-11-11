@@ -23,7 +23,7 @@ namespace Redm_backend
 			builder.Services.ConfigureCors();
 
 			var app = builder.Build();
-			app.MapGet("/", async context => await context.Response.WriteAsync(ServiceExtensions.AddMetricTonSignature()));
+			app.MapGet("/", async context => await context.Response.WriteAsync(ServiceExtensions.AddIbraAndTonaSignature()));
 
 			// Configure Middleware Pipeline
 			app.ConfigureExceptionHandler();
