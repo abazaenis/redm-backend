@@ -76,25 +76,27 @@
 		[HttpPost("GoogleSignIn")]
 		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> GoogleSignIn(GoogleSignInVMDto model)
 		{
-			try
+			var response = await _authRepo.GoogleSignIn(model);
+
+			if (response.StatusCode == 200)
 			{
-				var response = await _authRepo.GoogleSignIn(model);
-
-				if (response.StatusCode == 201)
-				{
-					return Created(string.Empty, response);
-				}
-
 				return Ok(response);
 			}
-			catch (Exception ex)
+			else if (response.StatusCode == 400)
 			{
-				var errorResponse = new
-				{
-					Message = "Došlo je do greške prilikom vašeg zahtjeva.",
-					Details = ex.Message,
-				};
-				return BadRequest(errorResponse);
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 401)
+			{
+				return Unauthorized(response);
+			}
+			else if (response.StatusCode == 500)
+			{
+				return StatusCode(500, response);
+			}
+			else
+			{
+				return StatusCode(response.StatusCode, response);
 			}
 		}
 	}

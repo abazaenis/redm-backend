@@ -134,25 +134,14 @@
         [HttpPatch("UpdateLastActive")]
         public async Task<ActionResult<ServiceResponse<object?>>> UpdateLastActive()
         {
-            try
-            {
-                var response = await _userService.UpdateLastActive();
+            var response = await _userService.UpdateLastActive();
 
-                if (response.StatusCode == 404)
-                {
-                    return NotFound(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception)
+            if (response.StatusCode == 404)
             {
-                return StatusCode(500, new ServiceResponse<AccessToken>
-                {
-                    Message = "Došlo je do greške na serveru. Molim vas pokušajte ponovo.",
-                    StatusCode = 500,
-                });
+                return NotFound(response);
             }
+
+            return Ok(response);
         }
     }
 }
