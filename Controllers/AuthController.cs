@@ -67,7 +67,7 @@
 
 			if (response.StatusCode == 401)
 			{
-				return Unauthorized("Refresh token je na crnoj listi.");
+				return Unauthorized(response);
 			}
 
 			return Ok(response);

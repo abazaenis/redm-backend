@@ -1,22 +1,13 @@
 ﻿namespace Redm_backend.Data
 {
 	using System.IdentityModel.Tokens.Jwt;
-	using System.Net.Http.Headers;
 	using System.Security.Claims;
-	using System.Text.Json;
 	using System.Text.RegularExpressions;
-
 	using Google.Apis.Auth;
-
 	using Microsoft.EntityFrameworkCore;
 	using Microsoft.IdentityModel.Tokens;
-
-	using Newtonsoft.Json.Linq;
-
 	using Redm_backend.Dtos.Auth;
 	using Redm_backend.Models;
-
-	using static Google.Apis.Auth.GoogleJsonWebSignature;
 
 	public class AuthRepository : IAuthRepository
 	{
@@ -148,11 +139,19 @@
 		public async Task<ServiceResponse<TokensResponseDto>> Refresh(string refreshToken)
 		{
 			var response = new ServiceResponse<TokensResponseDto>();
-			var validRefreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Token == refreshToken);
+			using var transaction = await _context.Database.BeginTransactionAsync();
 
-			// Check if given refresh token is valid
-			if (validRefreshToken is not null)
+			try
 			{
+				var validRefreshToken = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Token == refreshToken);
+
+				if (validRefreshToken == null)
+				{
+					response.StatusCode = 401;
+					response.DebugMessage = "Refresh token koji ste poslali nije validan.";
+					return response;
+				}
+
 				if (validRefreshToken.Expiration < DateTime.UtcNow)
 				{
 					response.StatusCode = 401;
@@ -167,7 +166,9 @@
 
 				validRefreshToken.Token = newRefreshToken;
 				validRefreshToken.Expiration = DateTime.UtcNow.AddDays(60);
+
 				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
 
 				response.Data = new TokensResponseDto
 				{
@@ -176,10 +177,12 @@
 				};
 				response.DebugMessage = "Zahtjev uspješan, generisani su novi access i refresh tokeni.";
 			}
-			else
+			catch (Exception ex)
 			{
-				response.StatusCode = 401;
-				response.DebugMessage = "Refresh token koji ste poslali nije validan.";
+				await transaction.RollbackAsync();
+				response.StatusCode = 500;
+				response.Message = "Trenutno nismo u mogućnosti da ispunimo zahtjev, pokušajte kasnije.";
+				response.DebugMessage = ex.Message;
 			}
 
 			return response;
