@@ -16,9 +16,9 @@
 		private readonly IHomePageService _homePageService;
 
 		public HomePageController(IHomePageService homePageService)
-        {
-            _homePageService = homePageService;
-        }
+		{
+			_homePageService = homePageService;
+		}
 
 		[HttpGet("LoadData")]
 		public async Task<ActionResult<ServiceResponse<HomePageDataDto>>> LoadData()

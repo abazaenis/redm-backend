@@ -2,8 +2,8 @@
 {
 	public class PastPeriodDto
 	{
-        public string? FromTo { get; set; }
+		public string? FromTo { get; set; }
 
-        public int PeriodDuration { get; set; }
-    }
+		public int PeriodDuration { get; set; }
+	}
 }

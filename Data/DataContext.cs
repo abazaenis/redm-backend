@@ -1,29 +1,30 @@
 ﻿namespace Redm_backend.Data
 {
-    using Microsoft.EntityFrameworkCore;
-    using Redm_backend.Models;
+	using Microsoft.EntityFrameworkCore;
 
-    public class DataContext : DbContext
-    {
-        public DataContext(DbContextOptions<DataContext> options)
-            : base(options)
-        {
-        }
+	using Redm_backend.Models;
 
-        public DbSet<User> Users => Set<User>();
+	public class DataContext : DbContext
+	{
+		public DataContext(DbContextOptions<DataContext> options)
+			: base(options)
+		{
+		}
 
-        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+		public DbSet<User> Users => Set<User>();
 
-        public DbSet<Symptom> Symptoms => Set<Symptom>();
+		public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
-        public DbSet<PostCategory> PostCategories => Set<PostCategory>();
+		public DbSet<Symptom> Symptoms => Set<Symptom>();
 
-        public DbSet<Post> Posts => Set<Post>();
+		public DbSet<PostCategory> PostCategories => Set<PostCategory>();
 
-        public DbSet<Story> Stories => Set<Story>();
+		public DbSet<Post> Posts => Set<Post>();
 
-        public DbSet<PeriodHistory> PeriodHistory => Set<PeriodHistory>();
+		public DbSet<Story> Stories => Set<Story>();
 
-        public DbSet<Product> Products => Set<Product>();
-    }
+		public DbSet<PeriodHistory> PeriodHistory => Set<PeriodHistory>();
+
+		public DbSet<Product> Products => Set<Product>();
+	}
 }

@@ -1,25 +1,29 @@
 ﻿namespace Redm_backend.Extensions.ServiceExtensions
 {
-    using System.Text;
-    using Azure.Storage.Blobs;
-    using Microsoft.AspNetCore.Authentication.JwtBearer;
-    using Microsoft.EntityFrameworkCore;
-    using Microsoft.IdentityModel.Tokens;
-    using Microsoft.OpenApi.Models;
-    using Redm_backend.Data;
-    using Redm_backend.Dtos.PeriodHistory;
-    using Redm_backend.Services.AdminService;
-    using Redm_backend.Services.CronService;
-    using Redm_backend.Services.HomePageService;
-    using Redm_backend.Services.PeriodService;
-    using Redm_backend.Services.PostService;
-    using Redm_backend.Services.ProductService;
-    using Redm_backend.Services.StoryService;
-    using Redm_backend.Services.SymptomService;
-    using Redm_backend.Services.UserService;
-    using Swashbuckle.AspNetCore.Filters;
+	using System.Text;
 
-    public static class ServiceExtensions
+	using Azure.Storage.Blobs;
+
+	using Microsoft.AspNetCore.Authentication.JwtBearer;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.IdentityModel.Tokens;
+	using Microsoft.OpenApi.Models;
+
+	using Redm_backend.Data;
+	using Redm_backend.Dtos.PeriodHistory;
+	using Redm_backend.Services.AdminService;
+	using Redm_backend.Services.CronService;
+	using Redm_backend.Services.HomePageService;
+	using Redm_backend.Services.PeriodService;
+	using Redm_backend.Services.PostService;
+	using Redm_backend.Services.ProductService;
+	using Redm_backend.Services.StoryService;
+	using Redm_backend.Services.SymptomService;
+	using Redm_backend.Services.UserService;
+
+	using Swashbuckle.AspNetCore.Filters;
+
+	public static class ServiceExtensions
 	{
 		public static void ConfigureCors(this IServiceCollection services) => // TODO: restrict CORS only to EXPO requests
 			services.AddCors(options =>
@@ -111,7 +115,6 @@
 
 		public static string AddIbraAndTonaSignature()
 		{
-
 			return @"
 .........................................................................................................+**#####@@.+@#*..-..............................................
 .=+++++++++++++++++++++++++++++++++++++++==++=#=@@*..@%-==+++++++++++++++++++++++++++++++++++++=+@@.=-.@@@@@@@@@@@.:-@@@@.@:=+#@@@++++++++++++++++++++++++++++++++++++++.
@@ -168,7 +171,7 @@
 .+*******####*****%-@%+-+@@:%##@@@@@+.=++++===@@+==+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.
 .+****************@.@#=*@@##**#%@@=.:%@-=+++++==%@==++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.
 .****************#*-@*@@@*-+#@@=..*@#@+=#=-=++++==@@-=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.
-.................:.:-=#-..::....:........-=.........:....................................................................................................................
+.................:.:-=#-..::....:........-=.........:.........................................................................................................IBRA I TONA
 ";
 		}
 	}

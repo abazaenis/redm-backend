@@ -1,28 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
+﻿#nullable disable
 
 namespace Redm_backend.Migrations
 {
-    /// <inheritdoc />
-    public partial class RenamingColumn : Migration
-    {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.RenameColumn(
-                name: "SexualActivitySymtpoms",
-                table: "Symptoms",
-                newName: "SexualActivitySymptoms");
-        }
+	using Microsoft.EntityFrameworkCore.Migrations;
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.RenameColumn(
-                name: "SexualActivitySymptoms",
-                table: "Symptoms",
-                newName: "SexualActivitySymtpoms");
-        }
-    }
+	/// <inheritdoc />
+	public partial class RenamingColumn : Migration
+	{
+		/// <inheritdoc />
+		protected override void Up(MigrationBuilder migrationBuilder)
+		{
+			migrationBuilder.RenameColumn(
+				name: "SexualActivitySymtpoms",
+				table: "Symptoms",
+				newName: "SexualActivitySymptoms");
+		}
+
+		/// <inheritdoc />
+		protected override void Down(MigrationBuilder migrationBuilder)
+		{
+			migrationBuilder.RenameColumn(
+				name: "SexualActivitySymptoms",
+				table: "Symptoms",
+				newName: "SexualActivitySymtpoms");
+		}
+	}
 }

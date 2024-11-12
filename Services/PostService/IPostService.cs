@@ -1,20 +1,21 @@
 ﻿namespace Redm_backend.Services.PostService
 {
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Dtos.Post;
-    using Redm_backend.Dtos.PostCategory;
-    using Redm_backend.Models;
+	using Microsoft.AspNetCore.Mvc;
 
-    public interface IPostService
-    {
-        Task<ServiceResponse<object?>> AddPost(AddPostDto post);
+	using Redm_backend.Dtos.Post;
+	using Redm_backend.Dtos.PostCategory;
+	using Redm_backend.Models;
 
-        Task<ServiceResponse<List<GetPostCategoryDto>>> GetPostsPreviews();
+	public interface IPostService
+	{
+		Task<ServiceResponse<object?>> AddPost(AddPostDto post);
 
-        Task<ServiceResponse<GetPostDto>> GetPost(int postId);
+		Task<ServiceResponse<List<GetPostCategoryDto>>> GetPostsPreviews();
 
-        Task<ServiceResponse<object?>> UpdatePost(UpdatePostDto post);
+		Task<ServiceResponse<GetPostDto>> GetPost(int postId);
 
-        Task<ServiceResponse<object?>> DeletePost(int postId);
-    }
+		Task<ServiceResponse<object?>> UpdatePost(UpdatePostDto post);
+
+		Task<ServiceResponse<object?>> DeletePost(int postId);
+	}
 }

@@ -46,10 +46,8 @@
 			{
 				PushTo = expoPushTokens,
 				PushBadgeCount = 7,
-				PushTitle = "Molba",
-				PushBody = "Dragi testni korisnici, molimo vas da ažurirate REDm aplikaciju. Najnoviju verziju možete pronaći na Google Play Store-u pretragom 'com.iefendic.redm'",
-				//PushTitle = "Samo mali podsjetnik",
-				//PushBody = "Otvori REDm i ostani u toku! 💕.",
+				PushTitle = "Samo mali podsjetnik",
+				PushBody = "Otvori REDm i ostani u toku! 💕.",
 			};
 
 			var result = await _expoSDKClient.PushSendAsync(pushTicketRequest);
@@ -210,7 +208,7 @@
 			}
 		}
 
-		private static List<string> GetUsersWithPeriodIn1Day(List<UserLastPeriodDto> usersWithDbEntries)
+		private static List<string?> GetUsersWithPeriodIn1Day(List<UserLastPeriodDto> usersWithDbEntries)
 		{
 			var targetDateIn1Day = DateTime.UtcNow.Date.AddDays(1);
 			var userExpoTokensWithPeriodIn1Day = usersWithDbEntries
@@ -230,7 +228,7 @@
 			return userExpoTokensWithPeriodIn1Day;
 		}
 
-		private static List<string> GetUsersWithPeriodIn5Days(List<UserLastPeriodDto> usersWithDbEntries)
+		private static List<string?> GetUsersWithPeriodIn5Days(List<UserLastPeriodDto> usersWithDbEntries)
 		{
 			var targetDateIn5Days = DateTime.UtcNow.Date.AddDays(5);
 			var userExpoTokensWithPeriodIn5Days = usersWithDbEntries
@@ -250,7 +248,7 @@
 			return userExpoTokensWithPeriodIn5Days;
 		}
 
-		private static List<string> GetUsersWithOvulationToday(List<UserLastPeriodDto> usersWithDbEntries)
+		private static List<string?> GetUsersWithOvulationToday(List<UserLastPeriodDto> usersWithDbEntries)
 		{
 			var today = DateTime.UtcNow.Date;
 			var userExpoTokensWithOvulationToday = usersWithDbEntries
@@ -272,7 +270,7 @@
 			return userExpoTokensWithOvulationToday;
 		}
 
-		private static List<string> GetUsersWithFertileDaysStartToday(List<UserLastPeriodDto> usersWithDbEntries)
+		private static List<string?> GetUsersWithFertileDaysStartToday(List<UserLastPeriodDto> usersWithDbEntries)
 		{
 			var today = DateTime.UtcNow.Date;
 			var userExpoTokensWithFertileDayStartingToday = usersWithDbEntries

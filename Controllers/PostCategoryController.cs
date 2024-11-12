@@ -1,79 +1,81 @@
 ﻿namespace Redm_backend.Controllers
 {
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Dtos.Post;
-    using Redm_backend.Dtos.PostCategory;
-    using Redm_backend.Models;
-    using Redm_backend.Services.AdminService;
-    using Swashbuckle.AspNetCore.Annotations;
+	using Microsoft.AspNetCore.Authorization;
+	using Microsoft.AspNetCore.Mvc;
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class PostCategoryController : ControllerBase
-    {
-        private readonly IPostCategoryService _postCategoryService;
+	using Redm_backend.Dtos.Post;
+	using Redm_backend.Dtos.PostCategory;
+	using Redm_backend.Models;
+	using Redm_backend.Services.AdminService;
 
-        public PostCategoryController(IPostCategoryService postCategoryService)
-        {
-            _postCategoryService = postCategoryService;
-        }
+	using Swashbuckle.AspNetCore.Annotations;
 
-        [HttpPost("AddPostCategory")]
-        [Authorize(Roles = "Admin")]
-        [SwaggerOperation(Summary = "Requires admin privileges")]
-        public async Task<ActionResult<ServiceResponse<PostCategory>>> AddPostCategory(CreatePostCategoryDto postCategoryDto)
-        {
-            var response = await _postCategoryService.AddPostCategory(postCategoryDto);
+	[ApiController]
+	[Route("api/[controller]")]
+	public class PostCategoryController : ControllerBase
+	{
+		private readonly IPostCategoryService _postCategoryService;
 
-            if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+		public PostCategoryController(IPostCategoryService postCategoryService)
+		{
+			_postCategoryService = postCategoryService;
+		}
 
-            return Created(string.Empty, response);
-        }
+		[HttpPost("AddPostCategory")]
+		[Authorize(Roles = "Admin")]
+		[SwaggerOperation(Summary = "Requires admin privileges")]
+		public async Task<ActionResult<ServiceResponse<PostCategory>>> AddPostCategory(CreatePostCategoryDto postCategoryDto)
+		{
+			var response = await _postCategoryService.AddPostCategory(postCategoryDto);
 
-        [HttpGet("GetPostCategories")]
-        [Authorize(Roles = "User,Admin")]
-        public async Task<ActionResult<ServiceResponse<List<PostCategoryPreviewDto>>>> GetPostCategories()
-        {
-            var response = await _postCategoryService.GetPostCategories();
-            return Ok(response);
-        }
+			if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-        [HttpPut("UpdatePostCategory")]
-        [Authorize(Roles = "Admin")]
-        [SwaggerOperation(Summary = "Requires admin privileges")]
-        public async Task<ActionResult<ServiceResponse<object?>>> UpdatePostCategory(UpdatePostCategoryDto postCategory)
-        {
-            var response = await _postCategoryService.UpdatePostCategory(postCategory);
+			return Created(string.Empty, response);
+		}
 
-            if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
-            else if (response.StatusCode == 400)
-            {
-                return BadRequest(response);
-            }
+		[HttpGet("GetPostCategories")]
+		[Authorize(Roles = "User,Admin")]
+		public async Task<ActionResult<ServiceResponse<List<PostCategoryPreviewDto>>>> GetPostCategories()
+		{
+			var response = await _postCategoryService.GetPostCategories();
+			return Ok(response);
+		}
 
-            return Ok(response);
-        }
+		[HttpPut("UpdatePostCategory")]
+		[Authorize(Roles = "Admin")]
+		[SwaggerOperation(Summary = "Requires admin privileges")]
+		public async Task<ActionResult<ServiceResponse<object?>>> UpdatePostCategory(UpdatePostCategoryDto postCategory)
+		{
+			var response = await _postCategoryService.UpdatePostCategory(postCategory);
 
-        [HttpDelete("DeletePostCategory")]
-        [Authorize(Roles = "Admin")]
-        [SwaggerOperation(Summary = "Requires admin privileges")]
-        public async Task<ActionResult<ServiceResponse<object?>>> DeletePostCategory(int postCategoryId)
-        {
-            var response = await _postCategoryService.DeletePostCategory(postCategoryId);
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+			else if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
 
-            if (response.StatusCode == 404)
-            {
-                return NotFound(response);
-            }
+			return Ok(response);
+		}
 
-            return Ok(response);
-        }
-    }
+		[HttpDelete("DeletePostCategory")]
+		[Authorize(Roles = "Admin")]
+		[SwaggerOperation(Summary = "Requires admin privileges")]
+		public async Task<ActionResult<ServiceResponse<object?>>> DeletePostCategory(int postCategoryId)
+		{
+			var response = await _postCategoryService.DeletePostCategory(postCategoryId);
+
+			if (response.StatusCode == 404)
+			{
+				return NotFound(response);
+			}
+
+			return Ok(response);
+		}
+	}
 }

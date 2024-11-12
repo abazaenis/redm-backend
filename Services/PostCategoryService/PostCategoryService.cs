@@ -1,109 +1,112 @@
 ﻿namespace Redm_backend.Services.AdminService
 {
-    using System.Collections.Generic;
-    using AutoMapper;
-    using Microsoft.EntityFrameworkCore;
-    using Redm_backend.Data;
-    using Redm_backend.Dtos.Post;
-    using Redm_backend.Dtos.PostCategory;
-    using Redm_backend.Models;
+	using System.Collections.Generic;
 
-    public class PostCategoryService : IPostCategoryService
-    {
-        private readonly DataContext _context;
-        private readonly IMapper _mapper;
+	using AutoMapper;
 
-        public PostCategoryService(DataContext context, IMapper mapper)
-        {
-            _context = context;
-            _mapper = mapper;
-        }
+	using Microsoft.EntityFrameworkCore;
 
-        public async Task<ServiceResponse<PostCategory>> AddPostCategory(CreatePostCategoryDto postCategoryDto)
-        {
-            var response = new ServiceResponse<PostCategory>();
+	using Redm_backend.Data;
+	using Redm_backend.Dtos.Post;
+	using Redm_backend.Dtos.PostCategory;
+	using Redm_backend.Models;
 
-            if (postCategoryDto.Title == null || postCategoryDto.Title.Length == 0)
-            {
-                response.Message = "Naziv kategorije mora imati barem jedan karakter";
-                response.StatusCode = 400;
+	public class PostCategoryService : IPostCategoryService
+	{
+		private readonly DataContext _context;
+		private readonly IMapper _mapper;
 
-                return response;
-            }
+		public PostCategoryService(DataContext context, IMapper mapper)
+		{
+			_context = context;
+			_mapper = mapper;
+		}
 
-            var categoryExists = await _context.PostCategories.AnyAsync(pc => pc.Title == postCategoryDto.Title);
+		public async Task<ServiceResponse<PostCategory>> AddPostCategory(CreatePostCategoryDto postCategoryDto)
+		{
+			var response = new ServiceResponse<PostCategory>();
 
-            if (categoryExists)
-            {
-                response.Message = $"Kategorija '{postCategoryDto.Title}' već postoji.";
-                response.StatusCode = 400;
-                return response;
-            }
+			if (postCategoryDto.Title == null || postCategoryDto.Title.Length == 0)
+			{
+				response.Message = "Naziv kategorije mora imati barem jedan karakter";
+				response.StatusCode = 400;
 
-            var newPostCategory = new PostCategory { Title = postCategoryDto.Title };
-            _context.PostCategories.Add(newPostCategory);
-            await _context.SaveChangesAsync();
+				return response;
+			}
 
-            response.StatusCode = 201;
-            response.Data = newPostCategory;
-            response.Message = "Uspješno ste dodali kategoriju";
-            return response;
-        }
+			var categoryExists = await _context.PostCategories.AnyAsync(pc => pc.Title == postCategoryDto.Title);
 
-        public async Task<ServiceResponse<List<PostCategoryPreviewDto>>> GetPostCategories()
-        {
-            var serviceResponse = new ServiceResponse<List<PostCategoryPreviewDto>>();
-            var postCategories = await _context.PostCategories.OrderBy(pc => pc.Title).ToListAsync();
+			if (categoryExists)
+			{
+				response.Message = $"Kategorija '{postCategoryDto.Title}' već postoji.";
+				response.StatusCode = 400;
+				return response;
+			}
 
-            serviceResponse.Data = _mapper.Map<List<PostCategoryPreviewDto>>(postCategories);
-            return serviceResponse;
-        }
+			var newPostCategory = new PostCategory { Title = postCategoryDto.Title };
+			_context.PostCategories.Add(newPostCategory);
+			await _context.SaveChangesAsync();
 
-        public async Task<ServiceResponse<object?>> UpdatePostCategory(UpdatePostCategoryDto postCategory)
-        {
-            var response = new ServiceResponse<object?>();
-            var postCategoryDb = await _context.PostCategories.FirstOrDefaultAsync(pc => pc.Id == postCategory.Id);
+			response.StatusCode = 201;
+			response.Data = newPostCategory;
+			response.Message = "Uspješno ste dodali kategoriju";
+			return response;
+		}
 
-            if (postCategoryDb is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Kategorija sa sa id-om '{postCategory.Id}' ne postoji.";
-                return response;
-            }
+		public async Task<ServiceResponse<List<PostCategoryPreviewDto>>> GetPostCategories()
+		{
+			var serviceResponse = new ServiceResponse<List<PostCategoryPreviewDto>>();
+			var postCategories = await _context.PostCategories.OrderBy(pc => pc.Title).ToListAsync();
 
-            var alreadyExists = await _context.PostCategories.AnyAsync(pc => (pc.Title == postCategory.Title) && (pc.Id != postCategory.Id));
+			serviceResponse.Data = _mapper.Map<List<PostCategoryPreviewDto>>(postCategories);
+			return serviceResponse;
+		}
 
-            if (alreadyExists)
-            {
-                response.StatusCode = 400;
-                response.Message = $"Kategorija sa nazivom '{postCategory.Title}' već postoji";
-                return response;
-            }
+		public async Task<ServiceResponse<object?>> UpdatePostCategory(UpdatePostCategoryDto postCategory)
+		{
+			var response = new ServiceResponse<object?>();
+			var postCategoryDb = await _context.PostCategories.FirstOrDefaultAsync(pc => pc.Id == postCategory.Id);
 
-            postCategoryDb.Title = postCategory.Title;
-            await _context.SaveChangesAsync();
+			if (postCategoryDb is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Kategorija sa sa id-om '{postCategory.Id}' ne postoji.";
+				return response;
+			}
 
-            response.Message = "Uspješno ste ažurirali kategoriju";
-            return response;
-        }
+			var alreadyExists = await _context.PostCategories.AnyAsync(pc => (pc.Title == postCategory.Title) && (pc.Id != postCategory.Id));
 
-        public async Task<ServiceResponse<object?>> DeletePostCategory(int postCategoryId)
-        {
-            var response = new ServiceResponse<object?>();
-            var postCategory = await _context.PostCategories.FirstOrDefaultAsync(pc => pc.Id == postCategoryId);
+			if (alreadyExists)
+			{
+				response.StatusCode = 400;
+				response.Message = $"Kategorija sa nazivom '{postCategory.Title}' već postoji";
+				return response;
+			}
 
-            if (postCategory is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Ne postoji kategorija sa id-om {postCategoryId}";
-                return response;
-            }
+			postCategoryDb.Title = postCategory.Title;
+			await _context.SaveChangesAsync();
 
-            _context.PostCategories.Remove(postCategory);
-            await _context.SaveChangesAsync();
+			response.Message = "Uspješno ste ažurirali kategoriju";
+			return response;
+		}
 
-            response.Message = "Uspješno ste obrisali kategoriju.";
-            return response;
-        }
-    }
+		public async Task<ServiceResponse<object?>> DeletePostCategory(int postCategoryId)
+		{
+			var response = new ServiceResponse<object?>();
+			var postCategory = await _context.PostCategories.FirstOrDefaultAsync(pc => pc.Id == postCategoryId);
+
+			if (postCategory is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Ne postoji kategorija sa id-om {postCategoryId}";
+				return response;
+			}
+
+			_context.PostCategories.Remove(postCategory);
+			await _context.SaveChangesAsync();
+
+			response.Message = "Uspješno ste obrisali kategoriju.";
+			return response;
+		}
+	}
 }

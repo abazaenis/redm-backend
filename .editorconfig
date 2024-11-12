@@ -29,3 +29,18 @@ dotnet_diagnostic.CS8618.severity = none
 
 # S3400: Methods should not return constants
 dotnet_diagnostic.S3400.severity = none
+
+# SA1122: Use string.Empty for empty strings
+dotnet_diagnostic.SA1122.severity = none
+
+# CS1591: Missing XML comment for publicly visible type or member
+dotnet_diagnostic.CS1591.severity = none
+
+# S3993: Custom attributes should be marked with "System.AttributeUsageAttribute"
+dotnet_diagnostic.S3993.severity = none
+
+# CA1018: Mark attributes with AttributeUsageAttribute
+dotnet_diagnostic.CA1018.severity = none
+
+# IDE0290: Use primary constructor
+dotnet_diagnostic.IDE0290.severity = none

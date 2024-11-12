@@ -1,128 +1,131 @@
 ﻿namespace Redm_backend.Services.PostService
 {
-    using System.Collections.Generic;
-    using AutoMapper;
-    using Microsoft.EntityFrameworkCore;
-    using Redm_backend.Data;
-    using Redm_backend.Dtos.Post;
-    using Redm_backend.Dtos.PostCategory;
-    using Redm_backend.Dtos.Story;
-    using Redm_backend.Models;
+	using System.Collections.Generic;
 
-    public class PostService : IPostService
-    {
-        private readonly DataContext _context;
-        private readonly IMapper _mapper;
+	using AutoMapper;
 
-        public PostService(DataContext context, IMapper mapper)
-        {
-            _context = context;
-            _mapper = mapper;
-        }
+	using Microsoft.EntityFrameworkCore;
 
-        public async Task<ServiceResponse<object?>> AddPost(AddPostDto post)
-        {
-            var response = new ServiceResponse<object?>();
+	using Redm_backend.Data;
+	using Redm_backend.Dtos.Post;
+	using Redm_backend.Dtos.PostCategory;
+	using Redm_backend.Dtos.Story;
+	using Redm_backend.Models;
 
-            var categoryExists = await _context.PostCategories.AnyAsync(pc => pc.Id == post.PostCategoryId);
+	public class PostService : IPostService
+	{
+		private readonly DataContext _context;
+		private readonly IMapper _mapper;
 
-            if (!categoryExists)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Kategorija sa id-em {post.PostCategoryId} ne postoji";
-                return response;
-            }
+		public PostService(DataContext context, IMapper mapper)
+		{
+			_context = context;
+			_mapper = mapper;
+		}
 
-            var newPost = new Post { PostCategoryId = post.PostCategoryId, Title = post.Title, Image = post.Image };
+		public async Task<ServiceResponse<object?>> AddPost(AddPostDto post)
+		{
+			var response = new ServiceResponse<object?>();
 
-            _context.Posts.Add(newPost);
-            await _context.SaveChangesAsync();
+			var categoryExists = await _context.PostCategories.AnyAsync(pc => pc.Id == post.PostCategoryId);
 
-            if (post.Stories != null)
-            {
-                foreach (AddStoryDto story in post.Stories)
-                {
-                    _context.Stories.Add(new Story
-                    {
-                        PostId = newPost.Id,
-                        Title = story.Title,
-                        Image = story.Image,
-                        BackgroundColor = story.BackgroundColor,
-                    });
-                }
-            }
+			if (!categoryExists)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Kategorija sa id-em {post.PostCategoryId} ne postoji";
+				return response;
+			}
 
-            await _context.SaveChangesAsync();
+			var newPost = new Post { PostCategoryId = post.PostCategoryId, Title = post.Title, Image = post.Image };
 
-            response.Message = "Uspješno ste dodali post";
-            return response;
-        }
+			_context.Posts.Add(newPost);
+			await _context.SaveChangesAsync();
 
-        public async Task<ServiceResponse<GetPostDto>> GetPost(int postId)
-        {
-            var response = new ServiceResponse<GetPostDto>();
-            var post = await _context.Posts.Include(p => p.Stories).FirstOrDefaultAsync(pc => pc.Id == postId);
+			if (post.Stories != null)
+			{
+				foreach (AddStoryDto story in post.Stories)
+				{
+					_context.Stories.Add(new Story
+					{
+						PostId = newPost.Id,
+						Title = story.Title,
+						Image = story.Image,
+						BackgroundColor = story.BackgroundColor,
+					});
+				}
+			}
 
-            if (post is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Ne postoji post sa id-om {postId}";
-                return response;
-            }
+			await _context.SaveChangesAsync();
 
-            response.Data = _mapper.Map<GetPostDto>(post);
-            return response;
-        }
+			response.Message = "Uspješno ste dodali post";
+			return response;
+		}
 
-        public async Task<ServiceResponse<object?>> UpdatePost(UpdatePostDto post)
-        {
-            var response = new ServiceResponse<object?>();
+		public async Task<ServiceResponse<GetPostDto>> GetPost(int postId)
+		{
+			var response = new ServiceResponse<GetPostDto>();
+			var post = await _context.Posts.Include(p => p.Stories).FirstOrDefaultAsync(pc => pc.Id == postId);
 
-            var postDb = await _context.Posts.FirstOrDefaultAsync(p => p.Id == post.Id);
+			if (post is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Ne postoji post sa id-om {postId}";
+				return response;
+			}
 
-            if (postDb is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Post sa id-om {post.Id} ne postoji.";
-                return response;
-            }
+			response.Data = _mapper.Map<GetPostDto>(post);
+			return response;
+		}
 
-            postDb.Title = post.Title;
-            postDb.Image = post.Image;
-            await _context.SaveChangesAsync();
+		public async Task<ServiceResponse<object?>> UpdatePost(UpdatePostDto post)
+		{
+			var response = new ServiceResponse<object?>();
 
-            response.Message = "Uspješno ste ažurirali post";
-            return response;
-        }
+			var postDb = await _context.Posts.FirstOrDefaultAsync(p => p.Id == post.Id);
 
-        public async Task<ServiceResponse<object?>> DeletePost(int postId)
-        {
-            var response = new ServiceResponse<object?>();
+			if (postDb is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Post sa id-om {post.Id} ne postoji.";
+				return response;
+			}
 
-            var postDb = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+			postDb.Title = post.Title;
+			postDb.Image = post.Image;
+			await _context.SaveChangesAsync();
 
-            if (postDb is null)
-            {
-                response.StatusCode = 404;
-                response.DebugMessage = $"Post sa id-om {postId} ne postoji.";
-                return response;
-            }
+			response.Message = "Uspješno ste ažurirali post";
+			return response;
+		}
 
-            _context.Posts.Remove(postDb);
-            await _context.SaveChangesAsync();
+		public async Task<ServiceResponse<object?>> DeletePost(int postId)
+		{
+			var response = new ServiceResponse<object?>();
 
-            response.Message = "Uspješno ste obrisali post";
-            return response;
-        }
+			var postDb = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
 
-        public async Task<ServiceResponse<List<GetPostCategoryDto>>> GetPostsPreviews()
-        {
-            var response = new ServiceResponse<List<GetPostCategoryDto>>();
-            var previews = await _context.PostCategories.Where(p => p.Posts.Count != 0).Include(p => p.Posts).OrderBy(pc => pc.Title).ToListAsync();
+			if (postDb is null)
+			{
+				response.StatusCode = 404;
+				response.DebugMessage = $"Post sa id-om {postId} ne postoji.";
+				return response;
+			}
 
-            response.Data = _mapper.Map<List<GetPostCategoryDto>>(previews);
+			_context.Posts.Remove(postDb);
+			await _context.SaveChangesAsync();
 
-            return response;
-        }
-    }
+			response.Message = "Uspješno ste obrisali post";
+			return response;
+		}
+
+		public async Task<ServiceResponse<List<GetPostCategoryDto>>> GetPostsPreviews()
+		{
+			var response = new ServiceResponse<List<GetPostCategoryDto>>();
+			var previews = await _context.PostCategories.Where(p => p.Posts.Count != 0).Include(p => p.Posts).OrderBy(pc => pc.Title).ToListAsync();
+
+			response.Data = _mapper.Map<List<GetPostCategoryDto>>(previews);
+
+			return response;
+		}
+	}
 }

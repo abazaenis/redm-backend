@@ -2,9 +2,9 @@
 {
 	using Redm_backend.Dtos.Post;
 	using Redm_backend.Dtos.Product;
-    using Redm_backend.Models;
+	using Redm_backend.Models;
 
-    public interface IProductService
+	public interface IProductService
 	{
 		Task<ServiceResponse<object?>> AddProduct(AddProductDto product);
 

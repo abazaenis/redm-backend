@@ -1,15 +1,18 @@
 ﻿namespace Redm_backend.Controllers
 {
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Mvc;
-    using Redm_backend.Models;
-    using Redm_backend.Services.ApiKeyService;
-    using Redm_backend.Services.CronService;
-    using Swashbuckle.AspNetCore.Annotations;
+	using System.Threading.Tasks;
 
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CronController : ControllerBase
+	using Microsoft.AspNetCore.Mvc;
+
+	using Redm_backend.Models;
+	using Redm_backend.Services.ApiKeyService;
+	using Redm_backend.Services.CronService;
+
+	using Swashbuckle.AspNetCore.Annotations;
+
+	[ApiController]
+	[Route("api/[controller]")]
+	public class CronController : ControllerBase
 	{
 		private readonly ICronService _cronService;
 

@@ -49,14 +49,14 @@
 
 			var periodsInRange = await _context.PeriodHistory
 				.Where(ph => ph.UserId == userId &&
-                ((ph.StartDate >= smallestDateStart.AddDays(-1) && ph.StartDate <= largestDateEnd.AddDays(1)) ||
-                (ph.EndDate >= smallestDateStart.AddDays(-1) && ph.EndDate <= largestDateEnd.AddDays(1))))
+				((ph.StartDate >= smallestDateStart.AddDays(-1) && ph.StartDate <= largestDateEnd.AddDays(1)) ||
+				(ph.EndDate >= smallestDateStart.AddDays(-1) && ph.EndDate <= largestDateEnd.AddDays(1))))
 				.OrderBy(ph => ph.StartDate)
 				.ToListAsync();
 
 			foreach (var action in actions)
 			{
-				action.Date = new DateTime(action.Date.Year, action.Date.Month, action.Date.Day, 0, 0, 0, 0);
+				action.Date = new DateTime(action.Date.Year, action.Date.Month, action.Date.Day, 0, 0, 0, 0, DateTimeKind.Utc);
 
 				if (action.Action == ActionType.Add)
 				{
@@ -240,6 +240,52 @@
 			return response;
 		}
 
+		private static void CheckPeriodRequestDates(DateTime startDate, DateTime endDate, out string message, out bool validRequest)
+		{
+			startDate = startDate.Date;
+			endDate = endDate.Date;
+
+			if (endDate < startDate)
+			{
+				validRequest = false;
+				message = "Datum završetka ne može biti veći od datuma kraja";
+			}
+			else if (endDate - startDate > TimeSpan.FromDays(10))
+			{
+				validRequest = false;
+				message = "Trajanje menstruacije može biti najmanje 1 dan i najviše 10 dana.";
+			}
+			else
+			{
+				message = string.Empty;
+				validRequest = true;
+			}
+		}
+
+		private static void SeparatePeriods(ref List<(DateTime startDate, DateTime endDate)> periods, Dictionary<string, GetPeriodDto> periodsDictionary)
+		{
+			var sortedDates = periodsDictionary.Keys
+				.Select(date => DateTime.Parse(date))
+				.OrderBy(date => date)
+				.ToList();
+
+			DateTime? periodStart = sortedDates[0];
+
+			for (int i = 1; i < sortedDates.Count; i++)
+			{
+				var current = sortedDates[i];
+				var previous = sortedDates[i - 1];
+
+				if ((current - previous).TotalDays > 1)
+				{
+					periods.Add((periodStart.Value, previous));
+					periodStart = current;
+				}
+			}
+
+			periods.Add((periodStart.Value, sortedDates[^1]));
+		}
+
 		private async Task<bool> DetectOverlap(DateTime startDate, DateTime endDate, int userId, bool update = false, int periodId = -1)
 		{
 			var overlapExists = false;
@@ -262,28 +308,6 @@
 			}
 
 			return overlapExists;
-		}
-
-		private void CheckPeriodRequestDates(DateTime startDate, DateTime endDate, out string message, out bool validRequest)
-		{
-			startDate = startDate.Date;
-			endDate = endDate.Date;
-
-			if (endDate < startDate)
-			{
-				validRequest = false;
-				message = "Datum završetka ne može biti veći od datuma kraja";
-			}
-			else if (endDate - startDate > TimeSpan.FromDays(10))
-			{
-				validRequest = false;
-				message = "Trajanje menstruacije može biti najmanje 1 dan i najviše 10 dana.";
-			}
-			else
-			{
-				message = string.Empty;
-				validRequest = true;
-			}
 		}
 
 		private async Task AddPeriodDays(Dictionary<string, GetPeriodDto> periodsDictionary, int userId)
@@ -321,7 +345,7 @@
 
 		private void AddPredictedPeriodDays(ref Dictionary<string, GetPeriodDto> periodsDictionary, int averageCycleLength, int averagePeriodLength, DateTime predictedStartDate)
 		{
-			var endDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1)
+			var endDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc)
 				   .AddMonths(1)
 				   .AddYears(2);
 
@@ -403,7 +427,6 @@
 			for (int i = 0; i < periods.Count; i++)
 			{
 				var currentPeriodStart = DateTime.SpecifyKind(periods[i].startDate, DateTimeKind.Utc);
-				var currentPeriodEnd = DateTime.SpecifyKind(periods[i].endDate, DateTimeKind.Utc);
 
 				if (i == 0)
 				{
@@ -415,7 +438,6 @@
 
 				if (i > 0)
 				{
-					var previousPeriodStart = DateTime.SpecifyKind(periods[i - 1].startDate, DateTimeKind.Utc);
 					var previousPeriodEnd = DateTime.SpecifyKind(periods[i - 1].endDate, DateTimeKind.Utc);
 
 					if ((currentPeriodStart - previousPeriodEnd).TotalDays > 19)
@@ -435,33 +457,6 @@
 					var nextFertileEndDate = nextOvulationDate.AddDays(1);
 					AddOvulationAndFertileDays(ref periodsDictionary, nextFertileStartDate, nextFertileEndDate);
 				}
-			}
-		}
-
-		private void SeparatePeriods(ref List<(DateTime startDate, DateTime endDate)> periods, Dictionary<string, GetPeriodDto> periodsDictionary)
-		{
-			var sortedDates = periodsDictionary.Keys
-				.Select(date => DateTime.Parse(date))
-				.OrderBy(date => date)
-				.ToList();
-
-			DateTime? periodStart = sortedDates.First();
-
-			for (int i = 1; i < sortedDates.Count; i++)
-			{
-				var current = sortedDates[i];
-				var previous = sortedDates[i - 1];
-
-				if ((current - previous).TotalDays > 1)
-				{
-					periods.Add((periodStart.Value, previous));
-					periodStart = current;
-				}
-			}
-
-			if (periodStart.HasValue)
-			{
-				periods.Add((periodStart.Value, sortedDates.Last()));
 			}
 		}
 
@@ -599,16 +594,6 @@
 					previousPeriod = firstIndex > 0 ? periodsInRange[firstIndex - 1] : null;
 				}
 
-				//if (previousPeriod != null)
-				//{
-				//	response.DebugMessage += $"Closest previous period: {previousPeriod.StartDate} to {previousPeriod.EndDate}\n";
-				//}
-
-				//if (nextPeriod != null)
-				//{
-				//	response.DebugMessage += $"Closest next period: {nextPeriod.StartDate} to {nextPeriod.EndDate}\n";
-				//}
-
 				AddPeriodDay(periodsInRange, previousPeriod!, nextPeriod, date);
 
 				return;
@@ -633,8 +618,6 @@
 
 				if (date > firstPeriod.EndDate && date < secondPeriod.StartDate)
 				{
-					//response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
-					//response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
 					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
 					return;
 				}
@@ -644,13 +627,6 @@
 					secondPeriod = firstPeriod;
 					firstPeriod = firstIndex > 0 ? periodsInRange[firstIndex - 1] : null;
 
-					//if (firstPeriod != null)
-					//{
-					//	response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
-					//}
-
-					//response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
-
 					AddPeriodDay(periodsInRange, firstPeriod!, secondPeriod, date);
 					return;
 				}
@@ -659,12 +635,6 @@
 				{
 					firstPeriod = secondPeriod;
 					secondPeriod = secondIndex < periodsInRange.Count - 1 ? periodsInRange[secondIndex + 1] : null;
-
-					//response.DebugMessage += $"Closest previous period: {firstPeriod.StartDate} to {firstPeriod.EndDate}\n";
-					//if (secondPeriod != null)
-					//{
-					//	response.DebugMessage += $"Closest next period: {secondPeriod.StartDate} to {secondPeriod.EndDate}\n";
-					//}
 
 					AddPeriodDay(periodsInRange, firstPeriod, secondPeriod, date);
 					return;
@@ -727,9 +697,9 @@
 					periodsInRange.Sort((p1, p2) => p1.StartDate.CompareTo(p2.StartDate));
 				}
 			}
-			else if (firstPeriod == null && secondPeriod != null)
+			else if (firstPeriod == null)
 			{
-				if ((int)(secondPeriod.StartDate - date).TotalDays == 1)
+				if ((int)(secondPeriod!.StartDate - date).TotalDays == 1)
 				{
 					secondPeriod.StartDate = DateTime.SpecifyKind(date, DateTimeKind.Utc);
 				}
