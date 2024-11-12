@@ -147,7 +147,6 @@
 
 			await AddPeriodDays(periodsDictionary, userId);
 
-			// Add predicted periods based on database entries
 			var lastPeriod = await _context.PeriodHistory
 				.Where(ph => ph.UserId == userId)
 				.OrderByDescending(ph => ph.EndDate)
@@ -160,7 +159,7 @@
 				AddPredictedPeriodDays(ref periodsDictionary, averageCycleLength, averagePeriodLength, predictedStartDate);
 			}
 
-			if (!periodsDictionary.Any())
+			if (periodsDictionary.Count == 0)
 			{
 				response.Data = periodsDictionary;
 				return response;
@@ -286,6 +285,124 @@
 			periods.Add((periodStart.Value, sortedDates[^1]));
 		}
 
+		private static void AddPredictedPeriodDays(ref Dictionary<string, GetPeriodDto> periodsDictionary, int averageCycleLength, int averagePeriodLength, DateTime predictedStartDate)
+		{
+			var endDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+				   .AddMonths(1)
+				   .AddYears(2);
+
+			while (predictedStartDate <= endDate)
+			{
+				var predictedEndDate = predictedStartDate.AddDays(averagePeriodLength - 1);
+				int counter = 1;
+
+				for (var date = predictedStartDate; date <= predictedEndDate; date = date.AddDays(1))
+				{
+					var dateKey = date.ToString("yyyy-MM-dd");
+
+					if (!periodsDictionary.ContainsKey(dateKey))
+					{
+						var periodDto = new GetPeriodDto
+						{
+							Id = -1,
+							Selected = false,
+							Color = CalendarColor.Prediction,
+							TextColor = "#000",
+							StartingDay = date == predictedStartDate,
+							EndingDay = date == predictedEndDate,
+							DayIndex = counter,
+						};
+
+						periodsDictionary[dateKey] = periodDto;
+					}
+
+					counter++;
+				}
+
+				predictedStartDate = predictedStartDate.AddDays(averageCycleLength);
+			}
+		}
+
+		private static void AddOvulationAndFertileDays(ref Dictionary<string, GetPeriodDto> dict, DateTime fertileStart, DateTime fertileEnd)
+		{
+			var ovulationDate = fertileStart.AddDays(5);
+
+			int counter = 1;
+			for (var date = fertileStart; date <= fertileEnd; date = date.AddDays(1))
+			{
+				var dateKey = date.ToString("yyyy-MM-dd");
+				if (!dict.ContainsKey(dateKey))
+				{
+					dict[dateKey] = new GetPeriodDto
+					{
+						Id = -3,
+						Selected = false,
+						Color = CalendarColor.Fertile,
+						TextColor = "#fff",
+						StartingDay = date == fertileStart,
+						EndingDay = date == fertileEnd,
+						DayIndex = counter,
+					};
+
+					counter++;
+				}
+			}
+
+			var ovulationDateKey = ovulationDate.ToString("yyyy-MM-dd");
+			var ovulationDateTaken = dict.ContainsKey(ovulationDateKey);
+			if (!ovulationDateTaken || dict[ovulationDateKey].Id == -3)
+			{
+				dict[ovulationDateKey] = new GetPeriodDto
+				{
+					Id = -2,
+					Selected = false,
+					Color = CalendarColor.Ovulation,
+					TextColor = "#fff",
+					StartingDay = false,
+					EndingDay = false,
+					DayIndex = counter - 2,
+				};
+			}
+		}
+
+		private static void HandleOvulationAndFertileDays(Dictionary<string, GetPeriodDto> periodsDictionary, List<(DateTime startDate, DateTime endDate)> periods, int averageCycleLength)
+		{
+			for (int i = 0; i < periods.Count; i++)
+			{
+				var currentPeriodStart = DateTime.SpecifyKind(periods[i].startDate, DateTimeKind.Utc);
+
+				if (i == 0)
+				{
+					var ovulationDate = currentPeriodStart.AddDays(-14);
+					var fertileStartDate = ovulationDate.AddDays(-5);
+					var fertileEndDate = ovulationDate.AddDays(1);
+					AddOvulationAndFertileDays(ref periodsDictionary, fertileStartDate, fertileEndDate);
+				}
+
+				if (i > 0)
+				{
+					var previousPeriodStart = DateTime.SpecifyKind(periods[i - 1].startDate, DateTimeKind.Utc);
+
+					if ((currentPeriodStart - previousPeriodStart).TotalDays > 19)
+					{
+						var ovulationDate = currentPeriodStart.AddDays(-14);
+						var fertileStartDate = ovulationDate.AddDays(-5);
+						var fertileEndDate = ovulationDate.AddDays(1);
+						AddOvulationAndFertileDays(ref periodsDictionary, fertileStartDate, fertileEndDate);
+					}
+				}
+
+				if (i == periods.Count - 1)
+				{
+					var nextPeriodStart = currentPeriodStart.AddDays(averageCycleLength);
+					var nextOvulationDate = nextPeriodStart.AddDays(-14);
+					var nextFertileStartDate = nextOvulationDate.AddDays(-5);
+					var nextFertileEndDate = nextOvulationDate.AddDays(1);
+					AddOvulationAndFertileDays(ref periodsDictionary, nextFertileStartDate, nextFertileEndDate);
+				}
+			}
+		}
+
 		private async Task<bool> DetectOverlap(DateTime startDate, DateTime endDate, int userId, bool update = false, int periodId = -1)
 		{
 			var overlapExists = false;
@@ -339,123 +456,6 @@
 
 					periodsDictionary[date.ToString("yyyy-MM-dd")] = periodDto;
 					counter++;
-				}
-			}
-		}
-
-		private void AddPredictedPeriodDays(ref Dictionary<string, GetPeriodDto> periodsDictionary, int averageCycleLength, int averagePeriodLength, DateTime predictedStartDate)
-		{
-			var endDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc)
-				   .AddMonths(1)
-				   .AddYears(2);
-
-			while (predictedStartDate <= endDate)
-			{
-				var predictedEndDate = predictedStartDate.AddDays(averagePeriodLength - 1);
-				int counter = 1;
-
-				for (var date = predictedStartDate; date <= predictedEndDate; date = date.AddDays(1))
-				{
-					var dateKey = date.ToString("yyyy-MM-dd");
-
-					if (!periodsDictionary.ContainsKey(dateKey))
-					{
-						var periodDto = new GetPeriodDto
-						{
-							Id = -1,
-							Selected = false,
-							Color = CalendarColor.Prediction,
-							TextColor = "#000",
-							StartingDay = date == predictedStartDate,
-							EndingDay = date == predictedEndDate,
-							DayIndex = counter,
-						};
-
-						periodsDictionary[dateKey] = periodDto;
-					}
-
-					counter++;
-				}
-
-				predictedStartDate = predictedStartDate.AddDays(averageCycleLength);
-			}
-		}
-
-		private void AddOvulationAndFertileDays(ref Dictionary<string, GetPeriodDto> dict, DateTime fertileStart, DateTime fertileEnd)
-		{
-			var ovulationDate = fertileStart.AddDays(5);
-
-			var ovulationDateKey = ovulationDate.ToString("yyyy-MM-dd");
-			if (!dict.ContainsKey(ovulationDateKey))
-			{
-				dict[ovulationDateKey] = new GetPeriodDto
-				{
-					Id = -2,
-					Selected = false,
-					Color = CalendarColor.Ovulation,
-					TextColor = "#fff",
-					StartingDay = false,
-					EndingDay = false,
-					DayIndex = 6,
-				};
-			}
-
-			int counter = 1;
-			for (var date = fertileStart; date <= fertileEnd; date = date.AddDays(1))
-			{
-				var dateKey = date.ToString("yyyy-MM-dd");
-				if (!dict.ContainsKey(dateKey))
-				{
-					dict[dateKey] = new GetPeriodDto
-					{
-						Id = -3,
-						Selected = false,
-						Color = CalendarColor.Fertile,
-						TextColor = "#fff",
-						StartingDay = date == fertileStart,
-						EndingDay = date == fertileEnd,
-						DayIndex = counter,
-					};
-				}
-
-				counter++;
-			}
-		}
-
-		private void HandleOvulationAndFertileDays(Dictionary<string, GetPeriodDto> periodsDictionary, List<(DateTime startDate, DateTime endDate)> periods, int averageCycleLength)
-		{
-			for (int i = 0; i < periods.Count; i++)
-			{
-				var currentPeriodStart = DateTime.SpecifyKind(periods[i].startDate, DateTimeKind.Utc);
-
-				if (i == 0)
-				{
-					var ovulationDate = currentPeriodStart.AddDays(-14);
-					var fertileStartDate = ovulationDate.AddDays(-5);
-					var fertileEndDate = ovulationDate.AddDays(1);
-					AddOvulationAndFertileDays(ref periodsDictionary, fertileStartDate, fertileEndDate);
-				}
-
-				if (i > 0)
-				{
-					var previousPeriodEnd = DateTime.SpecifyKind(periods[i - 1].endDate, DateTimeKind.Utc);
-
-					if ((currentPeriodStart - previousPeriodEnd).TotalDays > 19)
-					{
-						var ovulationDate = currentPeriodStart.AddDays(-14);
-						var fertileStartDate = ovulationDate.AddDays(-5);
-						var fertileEndDate = ovulationDate.AddDays(1);
-						AddOvulationAndFertileDays(ref periodsDictionary, fertileStartDate, fertileEndDate);
-					}
-				}
-
-				if (i == periods.Count - 1)
-				{
-					var nextPeriodStart = currentPeriodStart.AddDays(averageCycleLength);
-					var nextOvulationDate = nextPeriodStart.AddDays(-14);
-					var nextFertileStartDate = nextOvulationDate.AddDays(-5);
-					var nextFertileEndDate = nextOvulationDate.AddDays(1);
-					AddOvulationAndFertileDays(ref periodsDictionary, nextFertileStartDate, nextFertileEndDate);
 				}
 			}
 		}
