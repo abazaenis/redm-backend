@@ -339,7 +339,7 @@
 						Selected = false,
 						Color = CalendarColor.Fertile,
 						TextColor = "#fff",
-						StartingDay = date == fertileStart,
+						StartingDay = counter == 1,
 						EndingDay = date == fertileEnd,
 						DayIndex = counter,
 					};
