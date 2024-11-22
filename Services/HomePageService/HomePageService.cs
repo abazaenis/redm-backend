@@ -239,14 +239,22 @@
 
 			foreach (var period in allUserPeriods)
 			{
+				var formattedPeriod = $"{period.StartDate.ToString("dd.MM")} - {period.EndDate.ToString("dd.MM")}";
+
+				var lastYear = DateTime.UtcNow.AddYears(-1).Year;
+
+				if (period.StartDate.Year == lastYear)
+				{
+					formattedPeriod += $" ({lastYear})";
+				}
+
 				pastPeriods.Add(new PastPeriodDto
 				{
-					FromTo = $"{period.StartDate.ToString("dd.MM")} - {period.EndDate.ToString("dd.MM")}",
+					FromTo = formattedPeriod,
 					PeriodDuration = (period.EndDate - period.StartDate).Days + 1,
 				});
 			}
 
-			pastPeriods.Reverse();
 			data.PastPeriods = pastPeriods;
 		}
 
