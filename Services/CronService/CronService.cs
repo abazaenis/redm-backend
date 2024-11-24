@@ -45,7 +45,6 @@
 			var pushTicketRequest = new PushTicketRequest()
 			{
 				PushTo = expoPushTokens,
-				PushBadgeCount = 7,
 				PushTitle = "Samo mali podsjetnik",
 				PushBody = "Otvori REDm i ostani u toku! 💕.",
 			};

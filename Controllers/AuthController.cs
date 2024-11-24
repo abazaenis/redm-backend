@@ -99,5 +99,11 @@
 				return StatusCode(response.StatusCode, response);
 			}
 		}
+
+		[HttpPost("AppleSignIn")]
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> AppleSignIn() // TODO
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
