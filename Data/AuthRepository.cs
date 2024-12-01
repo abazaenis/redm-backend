@@ -255,7 +255,7 @@
 			var response = new ServiceResponse<TokensResponseDto>();
 			try
 			{
-				var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+				var user = await _context.Users.FirstOrDefaultAsync(u => u.AppleId == model.AppleId);
 
 				if (user is null)
 				{
@@ -273,13 +273,8 @@
 					await _context.SaveChangesAsync();
 
 					// Retrieve the newly created user
-					user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+					user = await _context.Users.FirstOrDefaultAsync(u => u.AppleId == model.AppleId);
 					response.StatusCode = 201;
-				}
-				else
-				{
-					user.AppleId = model.AppleId;
-					await _context.SaveChangesAsync();
 				}
 
 				var newRefreshTokenGuid = await GenerateRefreshTokenAsync(user!);
