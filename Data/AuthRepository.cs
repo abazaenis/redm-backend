@@ -399,13 +399,14 @@
 				};
 
 				_context.RefreshTokens.Add(newRefreshToken);
-				await _context.SaveChangesAsync();
 			}
 			else
 			{
 				existingRefreshToken.Token = newRefreshTokenGuid;
 				existingRefreshToken.Expiration = newExpirationDate;
 			}
+
+			await _context.SaveChangesAsync();
 
 			return newRefreshTokenGuid;
 		}
