@@ -53,10 +53,13 @@
 			}
 
 			var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
+			var createdWithApple = !string.IsNullOrEmpty(userDb.AppleId);
 
-			if (createdWithGoogle && (userDb.Email != user.Email))
+			if ((createdWithGoogle || createdWithApple) && (userDb.Email != user.Email))
 			{
-				response.Message = "Ne možete promijeniti email ukoliko ste izvršili prijavu preko Googlea.";
+				response.Message = createdWithGoogle
+					? "Ne možete promijeniti email ukoliko ste izvršili prijavu preko Googlea."
+					: "Ne možete promijeniti email ukoliko ste izvršili prijavu preko Applea.";
 				response.DebugMessage = string.Empty;
 				response.StatusCode = 400;
 				return response;
@@ -115,11 +118,14 @@
 			}
 
 			var createdWithGoogle = !string.IsNullOrEmpty(userDb.GoogleId);
+			var createdWithApple = !string.IsNullOrEmpty(userDb.AppleId);
 
-			if (createdWithGoogle)
+			if (createdWithGoogle || createdWithApple)
 			{
 				response.StatusCode = 400;
-				response.Message = "Ne možete ažurirati password ukoliko ste se prijavili preko Googlea.";
+				response.Message = createdWithGoogle
+					? "Ne možete ažurirati password ukoliko ste se prijavili preko Googlea."
+					: "Ne možete ažurirati password ukoliko ste se prijavili preko Applea.";
 				return response;
 			}
 

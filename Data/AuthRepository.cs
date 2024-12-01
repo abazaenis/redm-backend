@@ -223,30 +223,7 @@
 					await _context.SaveChangesAsync();
 				}
 
-				// Generate new refresh and access tokens
-				var newRefreshTokenGuid = Guid.NewGuid().ToString();
-				var newExpirationDate = DateTime.UtcNow.AddDays(60);
-				var existingRefreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.UserId == user!.Id);
-
-				// If user doesn't have old refresh token, generate new one
-				if (existingRefreshToken is null)
-				{
-					var newRefreshToken = new RefreshToken
-					{
-						Token = newRefreshTokenGuid,
-						Expiration = newExpirationDate,
-						UserId = user!.Id,
-					};
-
-					_context.RefreshTokens.Add(newRefreshToken);
-				}
-				else
-				{
-					existingRefreshToken.Token = newRefreshTokenGuid;
-					existingRefreshToken.Expiration = newExpirationDate;
-				}
-
-				await _context.SaveChangesAsync();
+				var newRefreshTokenGuid = await GenerateRefreshTokenAsync(user!);
 
 				var accessToken = CreateToken(user!, user!.PasswordHash != null);
 				response.Data = new TokensResponseDto
@@ -267,6 +244,65 @@
 			{
 				response.StatusCode = 500;
 				response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Google-a, pokušajte kasnije.";
+				response.DebugMessage = ex.Message;
+			}
+
+			return response;
+		}
+
+		public async Task<ServiceResponse<TokensResponseDto>> AppleSignIn(AppleSignInDto model)
+		{
+			var response = new ServiceResponse<TokensResponseDto>();
+			try
+			{
+				var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+
+				if (user is null)
+				{
+					var userToBeCreated = new User
+					{
+						FirstName = model.FirstName,
+						LastName = model.LastName,
+						Email = model.Email,
+						PasswordHash = null,
+						PasswordSalt = null,
+						AppleId = model.AppleId,
+					};
+
+					_context.Users.Add(userToBeCreated);
+					await _context.SaveChangesAsync();
+
+					// Retrieve the newly created user
+					user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+					response.StatusCode = 201;
+				}
+				else
+				{
+					user.AppleId = model.AppleId;
+					await _context.SaveChangesAsync();
+				}
+
+				var newRefreshTokenGuid = await GenerateRefreshTokenAsync(user!);
+
+				var accessToken = CreateToken(user!, user!.PasswordHash != null);
+				response.Data = new TokensResponseDto
+				{
+					AccessToken = accessToken,
+					RefreshToken = newRefreshTokenGuid,
+				};
+				response.Message = $"Dobro došli {user.FirstName}.";
+				response.DebugMessage = "Autentikacija uspješna, generisani novi access i refresh tokeni";
+			}
+			catch (InvalidJwtException ex)
+			{
+				response.StatusCode = 401;
+				response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Applea-a, pokušajte kasnije.";
+				response.DebugMessage = ex.Message;
+			}
+			catch (Exception ex)
+			{
+				response.StatusCode = 500;
+				response.Message = "Trenutno nismo u mogućnosti da izvršimo prijavu preko Applea-a, pokušajte kasnije.";
 				response.DebugMessage = ex.Message;
 			}
 
@@ -345,6 +381,33 @@
 				validRequest = true;
 				message = string.Empty;
 			}
+		}
+
+		private async Task<string> GenerateRefreshTokenAsync(User user)
+		{
+			var newRefreshTokenGuid = Guid.NewGuid().ToString();
+			var newExpirationDate = DateTime.UtcNow.AddDays(60);
+			var existingRefreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.UserId == user!.Id);
+
+			if (existingRefreshToken is null)
+			{
+				var newRefreshToken = new RefreshToken
+				{
+					Token = newRefreshTokenGuid,
+					Expiration = newExpirationDate,
+					UserId = user!.Id,
+				};
+
+				_context.RefreshTokens.Add(newRefreshToken);
+				await _context.SaveChangesAsync();
+			}
+			else
+			{
+				existingRefreshToken.Token = newRefreshTokenGuid;
+				existingRefreshToken.Expiration = newExpirationDate;
+			}
+
+			return newRefreshTokenGuid;
 		}
 	}
 }

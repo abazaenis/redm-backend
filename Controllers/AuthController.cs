@@ -101,9 +101,30 @@
 		}
 
 		[HttpPost("AppleSignIn")]
-		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> AppleSignIn() // TODO
+		public async Task<ActionResult<ServiceResponse<TokensResponseDto>>> AppleSignIn(AppleSignInDto model)
 		{
-			throw new NotImplementedException();
+			var response = await _authRepo.AppleSignIn(model);
+
+			if (response.StatusCode == 200)
+			{
+				return Ok(response);
+			}
+			else if (response.StatusCode == 400)
+			{
+				return BadRequest(response);
+			}
+			else if (response.StatusCode == 401)
+			{
+				return Unauthorized(response);
+			}
+			else if (response.StatusCode == 500)
+			{
+				return StatusCode(500, response);
+			}
+			else
+			{
+				return StatusCode(response.StatusCode, response);
+			}
 		}
 	}
 }

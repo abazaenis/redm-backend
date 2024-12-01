@@ -13,6 +13,8 @@
 
 		Task<ServiceResponse<TokensResponseDto>> GoogleSignIn(GoogleSignInVMDto model);
 
+		Task<ServiceResponse<TokensResponseDto>> AppleSignIn(AppleSignInDto model);
+
 		void CheckRegisterRequestValues(User user, out bool validRequest, out string message);
 
 		string CreateToken(User user, bool hasProfile = true);

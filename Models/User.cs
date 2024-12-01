@@ -18,6 +18,8 @@
 
 		public string? GoogleId { get; set; } = string.Empty;
 
+		public string? AppleId { get; set; } = string.Empty;
+
 		public int PeriodDuration { get; set; } = 5;
 
 		public int CycleDuration { get; set; } = 28;
