@@ -83,7 +83,7 @@
 				{
 					PushTo = pushTokensPeriodIn1Day,
 					PushBadgeCount = 7,
-					PushBody = "CickoMicko: Menstruacija Vam počinje sutra.",
+					PushBody = "Menstruacija Vam počinje sutra.",
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn1Day);
@@ -98,7 +98,7 @@
 				{
 					PushTo = pushTokensPeriodIn5Days,
 					PushBadgeCount = 7,
-					PushBody = "CickoMicko: Menstruacija Vam počinje za 5 dana.",
+					PushBody = "Menstruacija Vam počinje za 5 dana.",
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqPeriodIn5Days);
@@ -113,7 +113,7 @@
 				{
 					PushTo = pushTokensOvulationToday,
 					PushBadgeCount = 7,
-					PushBody = "CickoMicko: Danas Vam je ovulacija.",
+					PushBody = "Danas Vam je ovulacija.",
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqOvulationToday);
@@ -128,7 +128,7 @@
 				{
 					PushTo = pushTokensFertileDaysStartToday,
 					PushBadgeCount = 7,
-					PushBody = "CickoMicko: Danas Vam počinju plodni dani.",
+					PushBody = "Danas Vam počinju plodni dani.",
 				};
 
 				var result = await _expoSDKClient.PushSendAsync(pushTicketReqFertileDaysStartToday);
