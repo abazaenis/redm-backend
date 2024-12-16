@@ -61,5 +61,5 @@ jobs:
         with:
           app-name: 'dotnet-redm-api-linux'
           slot-name: 'Production'
-          package: .
+          package: './.net-app'
           
