@@ -52,11 +52,11 @@
 		}
 
 		[ApiKey]
-		[HttpDelete("DeleteOldPeriods")]
+		[HttpDelete("DeleteOldData")]
 		[SwaggerOperation(Description = "This endpoint is intended exclusively for use by cron jobs. An API key is required to access this endpoint.")]
 		public async Task<ActionResult<ServiceResponse<object?>>> DeleteOldPeriods()
 		{
-			var response = await _cronService.DeleteOldPeriods();
+			var response = await _cronService.DeleteOldData();
 
 			return Ok(response);
 		}

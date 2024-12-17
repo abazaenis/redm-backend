@@ -45,8 +45,8 @@
 			var pushTicketRequest = new PushTicketRequest()
 			{
 				PushTo = expoPushTokens,
-				PushTitle = "Samo mali podsjetnik",
-				PushBody = "Otvori REDm i ostani u toku! 💕.",
+				PushTitle = "Zahvala našim korisnicima",
+				PushBody = "Dragi korisnici, zahvaljujući vama uspješno smo završili testni period! Hvala vam svima 💖.",
 			};
 
 			var result = await _expoSDKClient.PushSendAsync(pushTicketRequest);
@@ -169,7 +169,7 @@
 			return response;
 		}
 
-		public async Task<ServiceResponse<object?>> DeleteOldPeriods()
+		public async Task<ServiceResponse<object?>> DeleteOldData()
 		{
 			var response = new ServiceResponse<object?>();
 
@@ -177,18 +177,30 @@
 			var dateDeletionThreshold = new DateTime(now.AddYears(-1).Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
 			var oldPeriods = await _context.PeriodHistory.Where(p => p.EndDate < dateDeletionThreshold).ToListAsync();
+			var oldSymptoms = await _context.Symptoms.Where(s => s.Date < dateDeletionThreshold).ToListAsync();
 
-			if (oldPeriods.Any())
+			int deletedPeriodsCount = oldPeriods.Count;
+			int deletedSymptomsCount = oldSymptoms.Count;
+
+			if (deletedPeriodsCount > 0)
 			{
 				_context.PeriodHistory.RemoveRange(oldPeriods);
+			}
 
+			if (deletedSymptomsCount > 0)
+			{
+				_context.Symptoms.RemoveRange(oldSymptoms);
+			}
+
+			if (deletedPeriodsCount > 0 || deletedSymptomsCount > 0)
+			{
 				await _context.SaveChangesAsync();
 
-				response.DebugMessage = $"Uspješno obrisano {oldPeriods.Count} starih zapisa o periodima.";
+				response.DebugMessage = $"Uspješno obrisano {deletedPeriodsCount} starih zapisa o periodima i {deletedSymptomsCount} starih simptoma.";
 			}
 			else
 			{
-				response.DebugMessage = "Nema starih zapisa o periodima za brisanje.";
+				response.DebugMessage = "Nema starih zapisa o periodima ili simptomima za brisanje.";
 			}
 
 			return response;

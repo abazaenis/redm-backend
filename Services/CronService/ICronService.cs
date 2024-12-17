@@ -10,6 +10,6 @@
 
 		Task<ServiceResponse<object?>> GetAndProcessReceipts();
 
-		Task<ServiceResponse<object?>> DeleteOldPeriods();
+		Task<ServiceResponse<object?>> DeleteOldData();
 	}
 }
