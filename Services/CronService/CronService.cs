@@ -82,7 +82,7 @@
 				var pushTicketReqPeriodIn1Day = new PushTicketRequest()
 				{
 					PushTo = pushTokensPeriodIn1Day,
-					PushBadgeCount = 7,
+					PushBadgeCount = 0,
 					PushBody = "Menstruacija Vam počinje sutra.",
 				};
 
@@ -97,7 +97,7 @@
 				var pushTicketReqPeriodIn5Days = new PushTicketRequest()
 				{
 					PushTo = pushTokensPeriodIn5Days,
-					PushBadgeCount = 7,
+					PushBadgeCount = 0,
 					PushBody = "Menstruacija Vam počinje za 5 dana.",
 				};
 
@@ -112,7 +112,7 @@
 				var pushTicketReqOvulationToday = new PushTicketRequest()
 				{
 					PushTo = pushTokensOvulationToday,
-					PushBadgeCount = 7,
+					PushBadgeCount = 0,
 					PushBody = "Danas Vam je ovulacija.",
 				};
 
@@ -127,7 +127,7 @@
 				var pushTicketReqFertileDaysStartToday = new PushTicketRequest()
 				{
 					PushTo = pushTokensFertileDaysStartToday,
-					PushBadgeCount = 7,
+					PushBadgeCount = 0,
 					PushBody = "Danas Vam počinju plodni dani.",
 				};
 
